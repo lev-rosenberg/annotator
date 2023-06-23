@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-interface CircleProps {
+interface Vertex {
   x: number;
   y: number;
 }
 
-const Circle: React.FC<CircleProps> = ({ x, y }) => (
+const Circle: React.FC<Vertex> = ({ x, y }) => (
   <circle cx={x} cy={y} r="3" fill="black" />
 );
 
 export default function SvgAnnotator() {
-    const [points, setPoints] = useState<CircleProps[]>([]);
-    const [polygons, setPolygons] = useState<CircleProps[][]>([])
+    const [points, setPoints] = useState<Vertex[]>([]);
+    const [polygons, setPolygons] = useState<Vertex[][]>([])
     const [width, setWidth] = useState(1)
     const [height, setHeight] = useState(1);
     const containerRef = useRef<HTMLDivElement>(null);
