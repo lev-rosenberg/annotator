@@ -18,10 +18,13 @@ export default function D3Annotator() {
         setWidth(window.innerWidth);
         setHeight(window.innerHeight / 2);
         const svg = d3.select(svgRef.current);
-        const polyline = svg.selectAll('polyline')
-        polyline.attr('stroke', 'black')
-                .attr('fill', 'none')
-                .attr('stroke-width', '2');
+        const polyline = svg
+  .selectAll('polyline')
+  .data([points])
+  .join('polyline')
+  .attr('stroke', 'black')
+  .attr('fill', 'none')
+  .attr('stroke-width', '2');
         svg.on('click', handleMouseClick);
         return () => {
             svg.on('click', null);
@@ -35,7 +38,7 @@ export default function D3Annotator() {
         const svg = d3.select(svgRef.current);
         const polyline = svg.selectAll('polyline');
         polyline.attr('points', convertPoints(points));
-        // polyline.exit().remove();
+        polyline.exit().remove(); // d3 func that gets rid of any unnessesary polylines
       }, [points]);
 
     function handleMouseClick (event: MouseEvent) {
@@ -45,9 +48,10 @@ export default function D3Annotator() {
     };
 
 
-
     function convertPoints(points: Vertex[]) {
+        // convert the points stored as [{x1, y1}, {x2, y2}] --> x1,y1 x2,y2
         const converted = points.map((pt) => `${pt.x},${pt.y}`).join(' ')
+        console.log(converted)
         return converted
     }
    

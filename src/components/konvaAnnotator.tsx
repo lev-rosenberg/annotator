@@ -87,7 +87,7 @@ export default function KonvaAnnotator(): JSX.Element {
         }}
         >
             <Layer>
-                <Text text="click 2 add new vertices to line" />
+                <Text text="This test is the only one which can end finish polygons––the others are just polylines with no end (i realized there was no need to build it out that much to get a feel of the framework)" />
                 <Polygon pts = {points}/>
                 {polygons.map((poly_pts, i) => {
                     return (<Polygon 
