@@ -75,9 +75,10 @@ export default function KonvaAnnotator(): JSX.Element {
         );
     };
     return (
-        <Stage width={width} height={height} 
+        <Stage width={width} height={height} draggable
         onClick={(e) => {
             const stage = e.target.getStage();
+            console.log(e.target)
             if (stage) {
                 const mousepos = stage.getPointerPosition()
                 console.log(mousepos)

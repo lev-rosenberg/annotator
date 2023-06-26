@@ -19,12 +19,12 @@ export default function D3Annotator() {
         setHeight(window.innerHeight / 2);
         const svg = d3.select(svgRef.current);
         const polyline = svg
-  .selectAll('polyline')
-  .data([points])
-  .join('polyline')
-  .attr('stroke', 'black')
-  .attr('fill', 'none')
-  .attr('stroke-width', '2');
+            .selectAll('polyline')
+            .data([points])
+            .join('polyline')
+            .attr('stroke', 'black')
+            .attr('fill', 'none')
+            .attr('stroke-width', '2');
         svg.on('click', handleMouseClick);
         return () => {
             svg.on('click', null);
