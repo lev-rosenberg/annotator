@@ -60,7 +60,7 @@ export default function D3Annotator(props: annotatorProps) {
                 
                 const polygons = past_polygon
                 .selectAll('polygon')
-                    .data(pts)
+                    .data([pts])
                     .join('polygon')
                     .attr('stroke', 'black')
                     .attr('fill', 'none')
@@ -76,7 +76,7 @@ export default function D3Annotator(props: annotatorProps) {
                 past_polygons.forEach((past_polygon:any) => past_polygon.remove());
             };
         }
-    }), [props.svgElement];
+    }), [];
 
     function handleMouseClick(event: MouseEvent) {
 
@@ -96,9 +96,11 @@ export default function D3Annotator(props: annotatorProps) {
     };
 
     function closingPoly(v: Vertex) {
+        
         /* Checks to see if new vertex is attempting to close the polygon. 
         There needs to be at least 2 existing points for a new vertex to make a polygon.
         And the new vertex must also be sufficiently close to the initial point in the polyline.*/
+
         if (points.length >= 2) {
             if (Math.abs(points[0].x - v.x) <= 7 && 
                 Math.abs(points[0].y - v.y) <= 7) {
