@@ -1,10 +1,10 @@
+import { svg } from 'd3-fetch';
 import React, { useEffect, useState, useRef } from 'react';
 import Two from "two.js";
 
 
 function TwoAnnotator() {
 
-    const [points, setPoints] = useState<paper.Segment[]>();
     const containerRef = useRef<HTMLDivElement>(null);
     const [width, setWidth] = useState(1)
     const [height, setHeight] = useState(1);
@@ -15,6 +15,7 @@ function TwoAnnotator() {
 
         if (!containerRef.current) return;
         const two = new Two({
+            type: Two.Types.svg,
             width: 400,
             height: 400,
             autostart: true,
@@ -24,6 +25,7 @@ function TwoAnnotator() {
             line.noFill();
             line.stroke = 'black';
             line.linewidth = 2;
+            line.closed = false
 
     const onMouseDown = (event: MouseEvent) => {
         const { clientX, clientY } = event;
@@ -32,7 +34,7 @@ function TwoAnnotator() {
             const x = clientX - left;
             const y = clientY - top;
             line.vertices.push(new Two.Anchor(x, y));
-            setPoints(line.vertices);
+            console.log(line)
         }
      };
      
@@ -40,9 +42,9 @@ function TwoAnnotator() {
         containerRef.current.addEventListener('mousedown', onMouseDown);
     }
     return () => {
-        // if (containerRef.current) {
-        //     containerRef.current.removeEventListener('mousedown', onMouseDown);
-        // }
+        if (containerRef.current) {
+            containerRef.current.removeEventListener('mousedown', onMouseDown);
+        }
         two.clear();
         two.renderer.domElement.remove();
       };

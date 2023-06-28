@@ -1,35 +1,30 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
 import D3Annotator from '../components/d3Annotator';
 
 export default function Viewer(): JSX.Element {
-    const svgRef = useRef<SVGSVGElement | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const imgSize = { x: 1000, y: 600 };
+  console.log(svgRef)
 
-    useEffect(() => {
-      svgRef.current = document.querySelector('svg'); // Get the reference to the <svg> element
-    }, []);
+  useEffect(() => {
+    svgRef.current = document.querySelector('svg'); // Get the reference to the <svg> element
+  }, [svgRef]);
 
   return (
     <div>
       <Link href="/">
         <h1>go back</h1>
       </Link>
-      <h1>Annotator testing actually fr tho</h1>
-      <div style={{ position: 'relative', width: '1000px', height: '600px' }}>
+      <h1>D3 Annotator demo</h1>
+      <div style={{ position: 'relative', width: '90vw', height: '60vh', margin: 'auto' }}>
         <svg
           ref={svgRef}
-          style={{ position: 'absolute', top: 0, left: 0 }}
-          width="1000"
-          height="600"
-        >
-          <image
-            xlinkHref="/images/mock-data.svg"
-            width="1000"
-            height="600"
-          />
-          <polyline/>
-        </svg>
-        <D3Annotator svgElement={svgRef} />
+          // viewBox={`0 0 ${imgSize.x} ${imgSize.y}`}
+          width="100%"
+           height="100%"
+        />
+        {svgRef.current && <D3Annotator svgElement={svgRef} />}
       </div>
     </div>
   );
