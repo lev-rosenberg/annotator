@@ -12,22 +12,26 @@ interface annotatorProps {
     isDrawing: Boolean
     setOpen: any
     polygonLabels: string[]
+    polygonPoints: Vertex[][]
+    setPolygonPoints: any
 }
 
 export default function D3Annotator(props: annotatorProps) {
     
     const [points, setPoints] = useState<Vertex[]>([]);
-    const [polygonPoints, setPolygonPoints] = useState<Vertex[][]>([]);
     const [isDrawing, setDrawing] = useState<Boolean>(props.isDrawing)
     const [indexDragging, setIndexDragging] = useState<number[] | null>(null)
 
+    
     const svg = d3.select(props.svgElement.current);
     
     useEffect(() => {
         if (props.svgElement) {
-            
-            const current_polyline = svg.append('g').attr('id', 'drawing_polygon');;
             const past_polygons:any = [];
+            // svg.select('#drawing_polygon').remove()
+            // past_polygons.forEach((past_polygon:any) => past_polygon.remove());
+            const current_polyline = svg.append('g').attr('id', 'drawing_polygon');;
+            
             
             const polyline = current_polyline
                 .selectAll('polyline')
@@ -50,7 +54,7 @@ export default function D3Annotator(props: annotatorProps) {
                 .attr('r', 2)
                 .attr('fill', 'black');
             
-            polygonPoints.forEach((pts, i) => {
+            props.polygonPoints.forEach((pts, i) => {
                 const past_polygon = svg.append('g').attr('id', (i));
                 past_polygons.push(past_polygon);
 
@@ -90,34 +94,43 @@ export default function D3Annotator(props: annotatorProps) {
         }
     }), [];
 
-    function handleVertexMouseDown(event: MouseEvent) {    
+    function handleVertexMouseDown(event: MouseEvent) {  
+        /* Check if you are clicking on a circle and that you aren't actively drawing polygons. 
+        Then, get the id's of the circle you clicked and its parent group. These will be how 
+        you index into the polygonPoints array. For instance, if you clicked on circle 4 in 
+        polygon 11, then you can index into polygonPoints[11][4].   */  
         // Get the clicked circle
         if (!props.isDrawing && (event.target as SVGElement).tagName === "circle") {
             const clicked = d3.select(event.target as Element);
-            // if clicked.tagName
             const group = d3.select((event.target as Element).parentNode as Element);
             const circle_id = clicked.attr("id")
             const group_id = group.attr("id")
             setIndexDragging([parseInt(group_id), parseInt(circle_id)])
-            console.log("down", circle_id, group_id)
         }
     }
 
     function handleVertexDrag(event: MouseEvent) {
+
+        /* If there is a vertex to drag (ie. indexDragging holds the index of a vertex),
+        then track the mouse coordinates and update the pastPolygons array at the given index. 
+        Because of d3 data-binding, any polygons bound to that array will */
+
         if (indexDragging) {
             const { offsetX, offsetY } = event;
             const newVertex: Vertex = { x: offsetX, y: offsetY};
 
-            const updatedPoints = [...polygonPoints]
+            const updatedPoints = [...props.polygonPoints]
             updatedPoints[indexDragging[0]][indexDragging[1]] = newVertex
-            setPolygonPoints(updatedPoints)
-            console.log("dragging")
+            props.setPolygonPoints(updatedPoints)
         }
     }
 
     function handleVertexMouseUp(event: MouseEvent) {
+
+        /* Resets the indexDragging state to null (from the index of the dragged point) t
+        to end dragging on mouseup. */
+
         setIndexDragging(null)
-        console.log("up")
     }
 
     function handleDrawMouseClick(event: MouseEvent) {
@@ -125,11 +138,12 @@ export default function D3Annotator(props: annotatorProps) {
         /* Adds new point to polyline if newVertex is not closing the polygon. 
         Otherwise sets the polygonPoints array to hold the points of the polyline.
         And then rests the points array to empty in order to begin a new polyline. */
+
         if (props.isDrawing) {
             const { offsetX, offsetY } = event;
             const newVertex: Vertex = { x: offsetX, y: offsetY};
             if (closingPoly(newVertex)) {
-                setPolygonPoints((prevPolygonPoints) => [...prevPolygonPoints, points]);
+                props.setPolygonPoints((prevPolygonPoints:Vertex[][]) => [...prevPolygonPoints, points]);
                 setPoints([]);
             }
             else {
@@ -142,7 +156,7 @@ export default function D3Annotator(props: annotatorProps) {
         
         /* Checks to see if new vertex is attempting to close the polygon. 
         There needs to be at least 2 existing points for a new vertex to make a polygon.
-        And the new vertex must also be sufficiently close to the initial point in the polyline.*/
+        And the new vertex must also be sufficiently close to the initial point in the polyline. */
 
         if (points.length >= 2) {
             if (Math.abs(points[0].x - v.x) <= 7 && 
@@ -153,6 +167,7 @@ export default function D3Annotator(props: annotatorProps) {
         }
         return false
     }
+
     function convertPoints(points: Vertex[]) {
         /* converts the points stored as [{x1, y1}, {x2, y2}] --> x1,y1 x2,y2 */
         const converted = points.map((pt) => `${pt.x},${pt.y}`).join(' ')
