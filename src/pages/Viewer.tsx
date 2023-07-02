@@ -33,8 +33,8 @@ export default function Viewer(): JSX.Element {
   //   polygonPoints.map((polygon) => {
   //     findBottomRight(polygon)
   //   })
+  //   console.log(labelCoords)
   // }), []
-  // console.log(labelCoords)
 
 
   useEffect(() => {

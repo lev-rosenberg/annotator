@@ -1,6 +1,5 @@
 import React, { useState, useEffect, RefObject } from 'react';
 import * as d3 from 'd3'
-import { Bool } from 'reselect/es/types';
 import styles from '../styles/svgAnnotator.module.css';
 
 interface Vertex {
@@ -19,7 +18,7 @@ interface annotatorProps {
 export default function D3Annotator(props: annotatorProps) {
     
     const [points, setPoints] = useState<Vertex[]>([]);
-    const [isDrawing, setDrawing] = useState<Boolean>(props.isDrawing)
+    const [polylineLen, setPolylineLen] = useState(0)
     const [indexDragging, setIndexDragging] = useState<number[] | null>(null)
 
     
@@ -27,23 +26,20 @@ export default function D3Annotator(props: annotatorProps) {
     
     useEffect(() => {
         if (props.svgElement) {
-            const past_polygons:any = [];
-            // svg.select('#drawing_polygon').remove()
-            // past_polygons.forEach((past_polygon:any) => past_polygon.remove());
+            const past_polygons: d3.Selection<SVGGElement, unknown, null, undefined>[] = [];
             const current_polyline = svg.append('g').attr('id', 'drawing_polygon');;
             
-            
+            //this is the polyline in process of being drawn
             const polyline = current_polyline
                 .selectAll('polyline')
                 .data([points])
                 .join('polyline')
                 .attr('stroke', 'black')
                 .attr('fill', 'none')
-                
                 .attr('stroke-width', '1')
                 .attr('points', convertPoints(points))
                 
-
+            //these are circles at the vertices of that polyline. not that important but i like them 
             const currCircles = current_polyline
                 .selectAll('.curr_circle')
                 .data(points)
@@ -54,6 +50,9 @@ export default function D3Annotator(props: annotatorProps) {
                 .attr('r', 2)
                 .attr('fill', 'black');
             
+
+            
+            //this loops through the list of points that past polygons held and constucts a new one. 
             props.polygonPoints.forEach((pts, i) => {
                 const past_polygon = svg.append('g').attr('id', (i));
                 past_polygons.push(past_polygon);
@@ -79,27 +78,35 @@ export default function D3Annotator(props: annotatorProps) {
                     .attr('fill', 'none')
                     .attr('stroke-width', '1')
                     .attr('points', convertPoints(pts))
+
+                console.log(polygons)
+
             })
             
             svg.on('mousedown', handleVertexMouseDown);
             svg.on('click', handleDrawMouseClick);
-            svg.on('mousemove', handleVertexDrag);
+            svg.on('mousemove', function(e) {
+                handleDrawMouseDrag(e);
+                handleVertexDrag(e);
+              });
             svg.on('mouseup', handleVertexMouseUp);
 
             return () => {
+                svg.on('mousedown', null);
                 svg.on('click', null);
-                current_polyline.remove()
-                past_polygons.forEach((past_polygon:any) => past_polygon.remove());
+                svg.on('mousemove', null);
+                svg.on('mouseup', null);
+                current_polyline.remove().exit()
+                past_polygons.forEach((past_polygon:any) => past_polygon.remove().exit());
             };
         }
     }), [];
-
     function handleVertexMouseDown(event: MouseEvent) {  
         /* Check if you are clicking on a circle and that you aren't actively drawing polygons. 
-        Then, get the id's of the circle you clicked and its parent group. These will be how 
-        you index into the polygonPoints array. For instance, if you clicked on circle 4 in 
-        polygon 11, then you can index into polygonPoints[11][4].   */  
-        // Get the clicked circle
+        Then, get the id's of the vertex you clicked and its parent group. These will be how 
+        you index into the polygonPoints array. For instance, if you clicked on vertex 4 in 
+        polygon 11, then you can index into polygonPoints[11][4]  */  
+
         if (!props.isDrawing && (event.target as SVGElement).tagName === "circle") {
             const clicked = d3.select(event.target as Element);
             const group = d3.select((event.target as Element).parentNode as Element);
@@ -143,14 +150,36 @@ export default function D3Annotator(props: annotatorProps) {
             const { offsetX, offsetY } = event;
             const newVertex: Vertex = { x: offsetX, y: offsetY};
             if (closingPoly(newVertex)) {
+                setPoints(prevPoints => prevPoints.splice(-1));
                 props.setPolygonPoints((prevPolygonPoints:Vertex[][]) => [...prevPolygonPoints, points]);
                 setPoints([]);
+                setPolylineLen(0)
+                props.setOpen(true)
             }
             else {
                 setPoints(prevPoints => [...prevPoints, newVertex]);
+                setPolylineLen(polylineLen+1)
             }
         }
     };
+
+    function handleDrawMouseDrag(event: MouseEvent) {
+        
+        if (props.isDrawing && points.length >= 1) {
+            console.log("hi")
+            const { offsetX, offsetY } = event;
+            const newVertex: Vertex = { x: offsetX, y: offsetY};
+            setPoints((prevPoints) => {
+                const updatedPoints = [...prevPoints];
+                if (closingPoly(newVertex)) {
+                  updatedPoints[polylineLen] = prevPoints[0];
+                } else {
+                  updatedPoints[polylineLen] = newVertex;
+                }
+                return updatedPoints;
+            });
+        }
+    }
 
     function closingPoly(v: Vertex) {
         
@@ -161,7 +190,6 @@ export default function D3Annotator(props: annotatorProps) {
         if (points.length >= 2) {
             if (Math.abs(points[0].x - v.x) <= 7 && 
                 Math.abs(points[0].y - v.y) <= 7) {
-                props.setOpen(true)
                 return true
             }
         }
