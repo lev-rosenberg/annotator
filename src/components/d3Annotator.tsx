@@ -103,23 +103,38 @@ export default function D3Annotator(props: annotatorProps) {
                 context.drawImage(image, 0, 0, 900, 600);
         }
     };
-        canvas.call(canvasZoom as any, d3.zoomTransform)
+        // canvas.call(canvasZoom as any, d3.zoomTransform)
         
     }, [props.canvasRef]);    
     
 
 /* ********** ZOOM AND PAN HANDLERS ********** */
 
-    const canvasZoom = d3.zoom().on("zoom", ({transform}) => handleCanvasZoom(transform));
-    const zoom = d3.zoom().on('zoom', handleZoom)
+    const zoom = d3.zoom()
+        .on("zoom.canvas", handleCanvasZoom)
+        .on("zoom.svg", handleSvgZoom);
 
-    function handleCanvasZoom(transform) {
-        console.log(transform)
+    function handleCanvasZoom(e) {
         // make all canvas groups transform proportionate to the currcent zoom and pan
+        if (canvas.node() != null) {
+            const [offsetX, offsetY ] = d3.pointer(e.sourceEvent, props.canvasRef.current);
+            const [x,y] = getProportionalPointerCoords(offsetX, offsetY)
+            console.log(x,y)
+            const context = canvas.node().getContext("2d");
+            context.save();
+            context.clearRect(0, 0, 900, 600);
+            context.translate(e.transform.x-x, e.transform.y-y);
+            context.scale(e.transform.k, e.transform.k);
+            context.translate(e.transform.x+x, e.transform.y+y);
+
+            const image = new Image();
+            image.src = "images/dots.jpeg";
+            context.drawImage(image, 0, 0, 900, 600);
+            context.restore();
+        }
         
 }
-    function handleZoom(e:any) {
-    
+    function handleSvgZoom(e:any) {
         // make all svg groups transform proportionate to the currcent zoom and pan
         
         d3.selectAll('g').attr('transform', e.transform)
@@ -128,8 +143,6 @@ export default function D3Annotator(props: annotatorProps) {
         d3.selectAll('circle').attr('r', 5 / e.transform.k)
         d3.selectAll('polygon').attr('stroke-width', 1 / e.transform.k)
         d3.selectAll('polyline').attr('stroke-width', 1 / e.transform.k)
-
-        handleCanvasZoom(e)
     }
 
     function getProportionalPointerCoords(x: number, y: number) {
