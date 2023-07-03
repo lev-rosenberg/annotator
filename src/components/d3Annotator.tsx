@@ -1,6 +1,7 @@
-import React, { useState, useEffect, RefObject } from 'react';
+import React, { useState, useLayoutEffect, useEffect, RefObject } from 'react';
 import * as d3 from 'd3'
 import styles from '../styles/svgAnnotator.module.css';
+import { AnySet } from 'immer/dist/internal';
 
 interface Vertex {
     x: number;
@@ -13,20 +14,23 @@ interface annotatorProps {
     polygonLabels: string[]
     polygonPoints: Vertex[][]
     setPolygonPoints: any
+    canvasRef: RefObject<HTMLCanvasElement>
 }
 
 export default function D3Annotator(props: annotatorProps) {
     
     const [points, setPoints] = useState<Vertex[]>([]);
     const [polylineLen, setPolylineLen] = useState(0)
-    const [indexDragging, setIndexDragging] = useState<number[] | null>(null)
-
-    
+    const [indexDragging, setIndexDragging] = useState<number[] | null>(null) 
     const svg = d3.select(props.svgElement.current);
-    
+    const canvas = d3.select(props.canvasRef.current)
+
+
+   
+
     useEffect(() => {
         if (props.svgElement) {
-            const past_polygons: d3.Selection<SVGGElement, unknown, null, undefined>[] = [];
+            const past_polygons = [];
             const current_polyline = svg.append('g').attr('id', 'drawing_polygon');;
             
             //this is the polyline in process of being drawn
@@ -39,18 +43,6 @@ export default function D3Annotator(props: annotatorProps) {
                 .attr('stroke-width', '1')
                 .attr('points', convertPoints(points))
                 
-            //these are circles at the vertices of that polyline. not that important but i like them 
-            const currCircles = current_polyline
-                .selectAll('.curr_circle')
-                .data(points)
-                .join('circle')
-                .attr('class', 'curr_circle')
-                .attr('cx', (pt) => pt.x)
-                .attr('cy', (pt) => pt.y)
-                .attr('r', 2)
-                .attr('fill', 'black');
-            
-
             
             //this loops through the list of points that past polygons held and constucts a new one. 
             props.polygonPoints.forEach((pts, i) => {
@@ -78,11 +70,8 @@ export default function D3Annotator(props: annotatorProps) {
                     .attr('fill', 'none')
                     .attr('stroke-width', '1')
                     .attr('points', convertPoints(pts))
-
-                console.log(polygons)
-
             })
-            
+
             svg.on('mousedown', handleVertexMouseDown);
             svg.on('click', handleDrawMouseClick);
             svg.on('mousemove', function(e) {
@@ -90,18 +79,74 @@ export default function D3Annotator(props: annotatorProps) {
                 handleVertexDrag(e);
               });
             svg.on('mouseup', handleVertexMouseUp);
+            svg.call(zoom as any, d3.zoomTransform)
 
             return () => {
                 svg.on('mousedown', null);
                 svg.on('click', null);
                 svg.on('mousemove', null);
                 svg.on('mouseup', null);
-                current_polyline.remove().exit()
-                past_polygons.forEach((past_polygon:any) => past_polygon.remove().exit());
+                svg.on('zoom', null)
+                svg.selectAll("*").remove();
+
             };
         }
-    }), [];
-    function handleVertexMouseDown(event: MouseEvent) {  
+    }, [points, indexDragging, props.polygonPoints, props.isDrawing]);
+
+    useEffect(() => {
+
+        if (canvas.node() != null) {
+            const context = canvas.node().getContext("2d");
+            const image = new Image();
+             image.src = "images/dots.jpeg";
+            image.onload = function() {
+                context.drawImage(image, 0, 0, 900, 600);
+        }
+    };
+        canvas.call(canvasZoom as any, d3.zoomTransform)
+        
+    }, [props.canvasRef]);    
+    
+
+/* ********** ZOOM AND PAN HANDLERS ********** */
+
+    const canvasZoom = d3.zoom().on("zoom", ({transform}) => handleCanvasZoom(transform));
+    const zoom = d3.zoom().on('zoom', handleZoom)
+
+    function handleCanvasZoom(transform) {
+        console.log(transform)
+        // make all canvas groups transform proportionate to the currcent zoom and pan
+        
+}
+    function handleZoom(e:any) {
+    
+        // make all svg groups transform proportionate to the currcent zoom and pan
+        
+        d3.selectAll('g').attr('transform', e.transform)
+
+        // keep all the circle radii and line widths proportionate to the zooming scale (e.transform.k)
+        d3.selectAll('circle').attr('r', 5 / e.transform.k)
+        d3.selectAll('polygon').attr('stroke-width', 1 / e.transform.k)
+        d3.selectAll('polyline').attr('stroke-width', 1 / e.transform.k)
+
+        handleCanvasZoom(e)
+    }
+
+    function getProportionalPointerCoords(x: number, y: number) {
+        
+        /* given coordinates of the pointer in the container, return the proportional 
+        coordinates depending on the zoom and pan. */
+
+        const transform = d3.zoomTransform(svg.node() as Element);
+        return transform.invert([x,y])
+    }
+
+
+/* ********** VERTEX DRAGGING HANDLERS ********** */
+    
+
+    function handleVertexMouseDown(event: MouseEvent) { 
+
         /* Check if you are clicking on a circle and that you aren't actively drawing polygons. 
         Then, get the id's of the vertex you clicked and its parent group. These will be how 
         you index into the polygonPoints array. For instance, if you clicked on vertex 4 in 
@@ -110,9 +155,7 @@ export default function D3Annotator(props: annotatorProps) {
         if (!props.isDrawing && (event.target as SVGElement).tagName === "circle") {
             const clicked = d3.select(event.target as Element);
             const group = d3.select((event.target as Element).parentNode as Element);
-            const circle_id = clicked.attr("id")
-            const group_id = group.attr("id")
-            setIndexDragging([parseInt(group_id), parseInt(circle_id)])
+            setIndexDragging([parseInt(group.attr("id")), parseInt(clicked.attr("id"))])
         }
     }
 
@@ -123,8 +166,9 @@ export default function D3Annotator(props: annotatorProps) {
         Because of d3 data-binding, any polygons bound to that array will */
 
         if (indexDragging) {
-            const { offsetX, offsetY } = event;
-            const newVertex: Vertex = { x: offsetX, y: offsetY};
+            const [offsetX, offsetY ] = d3.pointer(event, props.svgElement.current);
+            const [x,y] = getProportionalPointerCoords(offsetX, offsetY)
+            const newVertex: Vertex = { x: x, y: y};
 
             const updatedPoints = [...props.polygonPoints]
             updatedPoints[indexDragging[0]][indexDragging[1]] = newVertex
@@ -140,6 +184,10 @@ export default function D3Annotator(props: annotatorProps) {
         setIndexDragging(null)
     }
 
+
+    /* ********** POLYLINE DRAWING HANDLERS ********** */
+
+
     function handleDrawMouseClick(event: MouseEvent) {
 
         /* Adds new point to polyline if newVertex is not closing the polygon. 
@@ -147,8 +195,9 @@ export default function D3Annotator(props: annotatorProps) {
         And then rests the points array to empty in order to begin a new polyline. */
 
         if (props.isDrawing) {
-            const { offsetX, offsetY } = event;
-            const newVertex: Vertex = { x: offsetX, y: offsetY};
+            const [offsetX, offsetY ] = d3.pointer(event, props.svgElement.current);
+            const [x,y] = getProportionalPointerCoords(offsetX, offsetY)
+            const newVertex: Vertex = { x: x, y: y};
             if (closingPoly(newVertex)) {
                 setPoints(prevPoints => prevPoints.splice(-1));
                 props.setPolygonPoints((prevPolygonPoints:Vertex[][]) => [...prevPolygonPoints, points]);
@@ -164,11 +213,13 @@ export default function D3Annotator(props: annotatorProps) {
     };
 
     function handleDrawMouseDrag(event: MouseEvent) {
+
+        /* this is acting sorta buggy */
         
         if (props.isDrawing && points.length >= 1) {
-            console.log("hi")
-            const { offsetX, offsetY } = event;
-            const newVertex: Vertex = { x: offsetX, y: offsetY};
+            const [offsetX, offsetY ] = d3.pointer(event, props.svgElement.current);
+            const [x,y] = getProportionalPointerCoords(offsetX, offsetY)
+            const newVertex: Vertex = { x: x, y: y};
             setPoints((prevPoints) => {
                 const updatedPoints = [...prevPoints];
                 if (closingPoly(newVertex)) {
@@ -180,6 +231,8 @@ export default function D3Annotator(props: annotatorProps) {
             });
         }
     }
+
+    /* ********** UTILITY FUNCTIONS ********** */
 
     function closingPoly(v: Vertex) {
         
@@ -201,5 +254,7 @@ export default function D3Annotator(props: annotatorProps) {
         const converted = points.map((pt) => `${pt.x},${pt.y}`).join(' ')
         return converted
     }
+
+
     return null; // D3Annotator doesn't render any additional content, it just adds to the existing svg
 }

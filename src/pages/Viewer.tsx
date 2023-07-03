@@ -13,6 +13,8 @@ interface Vertex {
 export default function Viewer(): JSX.Element {
 
   const svgRef = useRef<SVGSVGElement | null>(null);
+   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
   const imgSize = { x: 1000, y: 600 };
   const [draw, setDraw] = useState<Boolean>(false)
   const [dialogueOpen, setDialogueOpen] = useState<Boolean>(false)
@@ -39,8 +41,8 @@ export default function Viewer(): JSX.Element {
 
   useEffect(() => {
      svgRef.current = document.querySelector('svg'); // Get the reference to the <svg> element
-     
-  }, [svgRef]);
+      canvasRef.current = document.querySelector('canvas'); // Get the reference to the <svg> element
+  }, [svgRef, canvasRef]);
 
   
 
@@ -52,14 +54,19 @@ export default function Viewer(): JSX.Element {
       <h1>D3 Annotator demo</h1>
       <button onClick = {()=> setDraw(!draw)}>{draw ? "Stop drawing" : "Start drawing"}</button>
       <div style={{ position: 'relative', width: '90vw', height: '60vh', margin: 'auto' }}>
-        <svg
+      <svg
           className = {styles.svg}
           id = "svg"
           ref={svgRef}
-           // viewBox={`0 0 ${imgSize.x} ${imgSize.y}`}
           width="100%"
-           height="100%"
+          height="100%"
         />
+        <canvas 
+          className = {styles.canvas} 
+          ref={canvasRef} 
+          style={{width: '90vw', height: '60vh', margin: 'auto' }}
+ 
+        /> 
         
         <D3Annotator 
           svgElement={svgRef} 
@@ -68,6 +75,7 @@ export default function Viewer(): JSX.Element {
           polygonLabels={polygonLabels}
           polygonPoints = {polygonPoints}
           setPolygonPoints = {setPolygonPoints}
+          canvasRef = {canvasRef}
         />
         <FormDialog 
           open={dialogueOpen} 
