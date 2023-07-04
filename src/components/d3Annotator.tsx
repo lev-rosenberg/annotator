@@ -2,6 +2,7 @@ import React, { useState, useLayoutEffect, useEffect, RefObject } from 'react';
 import * as d3 from 'd3'
 import styles from '../styles/svgAnnotator.module.css';
 import { AnySet } from 'immer/dist/internal';
+import { maxWidth } from '@mui/system';
 
 interface Vertex {
     x: number;
@@ -21,128 +22,148 @@ export default function D3Annotator(props: annotatorProps) {
     
     const [points, setPoints] = useState<Vertex[]>([]);
     const [polylineLen, setPolylineLen] = useState(0)
-    const [indexDragging, setIndexDragging] = useState<number[] | null>(null) 
+    const [indexDragging, setIndexDragging] = useState<number[] | null>(null) // the index of the vertex being dragged
     const svg = d3.select(props.svgElement.current);
     const canvas = d3.select(props.canvasRef.current)
+    const context = canvas.node()?.getContext("2d");
+    const width: number | undefined = canvas.node()?.width
+    const height: number | undefined = canvas.node()?.height
 
-
-   
 
     useEffect(() => {
-        if (props.svgElement) {
-            const past_polygons = [];
-            const current_polyline = svg.append('g').attr('id', 'drawing_polygon');;
-            
-            //this is the polyline in process of being drawn
-            const polyline = current_polyline
-                .selectAll('polyline')
-                .data([points])
-                .join('polyline')
-                .attr('stroke', 'black')
-                .attr('fill', 'none')
-                .attr('stroke-width', '1')
-                .attr('points', convertPoints(points))
+
+        //this is the polygon being drawn onClick
+        const current_polyline = svg.append('polyline')
+            .attr('id', 'drawing_polygon')
+            .attr('stroke', 'red')
+            .attr('fill', 'none')
+            .attr('stroke-width', '1')
+            .attr('points', convertPoints(points));
+
+        // this is the previously drawn polygons, with circles at each vertex.
+        const past_polygons = svg.selectAll('.polygon-group')
+            .data(props.polygonPoints as Vertex[][]) // associate each polygon with an element of polygonPoints[][]
+            .join(
+                enter => {
+                    const polygon = enter.append('g').attr('class', 'polygon-group').attr('id', (d, i) => i)
+                    polygon.selectAll('circle') // 
+                        .data(d => d) // Associate each circle with the vertices of the polygon (subelements of polygonPoints)
+                        .join('circle') // Append a circle for each vertex
+                        .attr('cx', (pt) => pt.x) // Use the current vertex's x-coordinate
+                        .attr('cy', (pt) => pt.y) // Use the current vertex's y-coordinate
+                        .attr('r', 8)
+                        .attr('fill', (props.isDrawing ? 'none' : 'red'))
+                        .attr('fill-opacity', '0.5')
+                        .attr('id', (pt, i) => i)
+                        .attr('class', styles.draggable);
+                    polygon.append('polygon')
+                        .attr('stroke', 'red')
+                        .attr('fill', 'none')
+                        .attr('stroke-width', '4')
+                        .attr('points', (d => convertPoints(d)));
+                    return polygon;
+                },
+                //this is pointless with the useEffect because of the useEffect
+                update => {
+                    // Update existing polygons and circles
+                    update
+                      .selectAll('circle')
+                      .data(d => d)
+                      .attr('cx', (pt) => pt.x) // Use the updated vertex's x-coordinate
+                      .attr('cy', (pt) => pt.y); // Use the updated vertex's y-coordinate
                 
-            
-            //this loops through the list of points that past polygons held and constucts a new one. 
-            props.polygonPoints.forEach((pts, i) => {
-                const past_polygon = svg.append('g').attr('id', (i));
-                past_polygons.push(past_polygon);
-
-                const pastCircles  = past_polygon
-                    .selectAll('.past_circle')
-                    .data(pts)
-                    .join( 'circle')
-                    .attr('class', 'past_circle')
-                    .attr('cx', (pt) => pt.x)
-                    .attr('cy', (pt) => pt.y)
-                    .attr('r', 5)
-                    .attr('fill', (props.isDrawing ? 'none' : 'black'))
-                    .attr('fill-opacity', '0.5')
-                    .attr('id', (pt, i) => (i))
-                    .attr("class", (styles.draggable));
+                    update
+                      .select('polygon')
+                      .attr('points', (d => convertPoints(d))); // Update the points attribute of the polygon
                 
-                const polygons = past_polygon
-                .selectAll('polygon')
-                    .data([pts])
-                    .join('polygon')
-                    .attr('stroke', 'black')
-                    .attr('fill', 'none')
-                    .attr('stroke-width', '1')
-                    .attr('points', convertPoints(pts))
-            })
+                    return update;
+                  },
+                //   exit => {
+                //     // Handle removal of elements
+                //     exit.remove();
+                //   }
+            )
 
-            svg.on('mousedown', handleVertexMouseDown);
-            svg.on('click', handleDrawMouseClick);
-            svg.on('mousemove', function(e) {
-                handleDrawMouseDrag(e);
-                handleVertexDrag(e);
-              });
-            svg.on('mouseup', handleVertexMouseUp);
-            svg.call(zoom as any, d3.zoomTransform)
+        svg.on('mousedown', handleVertexMouseDown);
+        svg.on('click', handleDrawMouseClick);
+        svg.on('mousemove', function(e) {
+            handleDrawMouseDrag(e);
+            handleVertexDrag(e);
+            });
+        svg.on('mouseup', handleVertexMouseUp);
+        svg.call(zoom as any, d3.zoomTransform)
 
-            return () => {
-                svg.on('mousedown', null);
-                svg.on('click', null);
-                svg.on('mousemove', null);
-                svg.on('mouseup', null);
-                svg.on('zoom', null)
-                svg.selectAll("*").remove();
-
-            };
-        }
+        return () => {
+            svg.on('mousedown', null);
+            svg.on('click', null);
+            svg.on('mousemove', null);
+            svg.on('mouseup', null);
+            svg.on('zoom', null)
+            svg.selectAll("*").remove().exit();
+        };
     }, [points, indexDragging, props.polygonPoints, props.isDrawing]);
-
+    
     useEffect(() => {
-
         if (canvas.node() != null) {
-            const context = canvas.node().getContext("2d");
+            
+            const context = canvas.node()?.getContext("2d");
             const image = new Image();
-             image.src = "images/dots.jpeg";
-            image.onload = function() {
-                context.drawImage(image, 0, 0, 900, 600);
-        }
-    };
-        // canvas.call(canvasZoom as any, d3.zoomTransform)
+            image.src = "images/bubbles.jpeg";
+            context?.drawImage(image, 0, 0, width!, height!);
+             handleCanvasZoom(d3.zoomIdentity)
+            
+        };
         
     }, [props.canvasRef]);    
     
 
 /* ********** ZOOM AND PAN HANDLERS ********** */
 
-    const zoom = d3.zoom()
+    const zoom = d3.zoom().scaleExtent([1, 8])
         .on("zoom.canvas", handleCanvasZoom)
         .on("zoom.svg", handleSvgZoom);
 
     function handleCanvasZoom(e) {
         // make all canvas groups transform proportionate to the currcent zoom and pan
-        if (canvas.node() != null) {
-            const [offsetX, offsetY ] = d3.pointer(e.sourceEvent, props.canvasRef.current);
-            const [x,y] = getProportionalPointerCoords(offsetX, offsetY)
-            console.log(x,y)
-            const context = canvas.node().getContext("2d");
-            context.save();
-            context.clearRect(0, 0, 900, 600);
-            context.translate(e.transform.x-x, e.transform.y-y);
-            context.scale(e.transform.k, e.transform.k);
-            context.translate(e.transform.x+x, e.transform.y+y);
+
+        if (!indexDragging) {
+
+            context?.save()
+            context?.clearRect(0, 0, width!, height!)
+            let t
+            if (e==d3.zoomIdentity) {
+                t = e
+            }
+            else {
+                t = e.transform
+            }
+            context?.translate(t.x, t.y);
+            context?.scale(t.k, t.k);
 
             const image = new Image();
-            image.src = "images/dots.jpeg";
-            context.drawImage(image, 0, 0, 900, 600);
-            context.restore();
+            image.src = "images/bubbles.jpeg";
+            context?.drawImage(image, 0, 0, width, height)
+            // context?.drawImage(image, e.transform.x, e.transform.y, width! * e.transform.k, height! * e.transform.k);
+
+            
+            context?.restore();
         }
-        
-}
+    }
+
     function handleSvgZoom(e:any) {
         // make all svg groups transform proportionate to the currcent zoom and pan
-        
-        d3.selectAll('g').attr('transform', e.transform)
 
-        // keep all the circle radii and line widths proportionate to the zooming scale (e.transform.k)
-        d3.selectAll('circle').attr('r', 5 / e.transform.k)
-        d3.selectAll('polygon').attr('stroke-width', 1 / e.transform.k)
-        d3.selectAll('polyline').attr('stroke-width', 1 / e.transform.k)
+        const svgRect = props.svgElement.current?.getBoundingClientRect();
+        const canvasRect = props.canvasRef.current?.getBoundingClientRect();
+        if (!indexDragging) {
+            const t = e.transform
+            
+            d3.selectAll('g').attr('transform', t)
+            // keep all the circle radii and line widths proportionate to the zooming scale (e.transform.k)
+            d3.selectAll('circle').attr('r', 5 / e.transform.k)
+            d3.selectAll('polygon').attr('stroke-width', 1 / e.transform.k)
+            d3.selectAll('polyline').attr('stroke-width', 1 / e.transform.k)
+        }
     }
 
     function getProportionalPointerCoords(x: number, y: number) {

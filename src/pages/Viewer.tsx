@@ -65,6 +65,7 @@ export default function Viewer(): JSX.Element {
           className = {styles.canvas} 
           ref={canvasRef} 
           style={{width: '90vw', height: '60vh', margin: 'auto' }}
+          
  
         /> 
         
