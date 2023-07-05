@@ -9,3 +9,11 @@
   cursor: move;
 }
 
+.img {
+  image-rendering: auto
+}
+
+.li {
+  list-style-type: none;
+  margin-right: 5em;
+}

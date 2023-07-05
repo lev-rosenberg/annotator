@@ -19,7 +19,7 @@ export default function Viewer(): JSX.Element {
   const [dialogueOpen, setDialogueOpen] = useState<Boolean>(false)
   const [polygonLabels, setPolygonLabels] = useState<string[]>([]);
   const [polygonPoints, setPolygonPoints] = useState<Vertex[][]>([]);
-
+  const [currentZoom, setCurrentZoom] = useState(1)
   useEffect(() => {
      svgRef.current = document.querySelector('svg'); // Get the reference to the <svg> element
   }, [svgRef]);
@@ -31,16 +31,18 @@ export default function Viewer(): JSX.Element {
         <h1>go back</h1>
       </Link>
       <h1>D3 Annotator demo</h1>
+      <h3>{currentZoom*100}%</h3>
       <button onClick = {()=> setDraw(!draw)}>{draw ? "Stop drawing" : "Start drawing"}</button>
-      <div style={{ position: 'relative', width: '68.5vw', height: '60vh', margin: 'auto' }}>
+      <div style={{position: 'relative', width: 'fit-content', height: 'fit-content', margin: 'auto' }}>
+        
         <svg
           className = {styles.svg}
           id = "svg"
           ref={svgRef}
-          width="100%"
-          height="100%" 
+          width="1200"
+          height="800" 
         >
-          <image href="/images/starry_night.jpeg" height="100%" width="100%" />
+          <image href="/images/bubbles.jpeg" height="100%" width="100%" className = {styles.img}/>
         </svg>
         
         <D3Annotator 
@@ -52,6 +54,7 @@ export default function Viewer(): JSX.Element {
           setPolygonPoints = {setPolygonPoints}
           width={svgRef.current?.getBoundingClientRect().width}
           height={svgRef.current?.getBoundingClientRect().height}
+          setCurrentZoom = {setCurrentZoom}
         />
         <FormDialog 
           open={dialogueOpen} 
@@ -59,6 +62,16 @@ export default function Viewer(): JSX.Element {
           labels = {polygonLabels} 
           setLabels ={setPolygonLabels}
         />
+        <ul className = {styles.li}>
+          {polygonPoints.map((polygon, i) => (
+            <li>
+              <h3>polygon {i} </h3>
+              {polygon.map(coords => (
+                <p>x: {coords.x}    y: {coords.y}</p>
+              ))}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
