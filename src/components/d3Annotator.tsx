@@ -87,23 +87,16 @@ export default function D3Annotator(props: annotatorProps) {
             .attr('transform', t.toString())
 
 
-        svg.on('mousedown', handleVertexMouseDown);
         
-
-        svg.on('click', handleDrawMouseClick);
+        svg.on('mousedown', handleVertexMouseDown)
+        svg.on('click', handleDrawPolylineClick) 
         svg.on('mousemove', function(e) {
-            handleDrawMouseDrag(e);
+            handleDrawPolylineDrag(e);
             handleVertexDrag(e);
             });
         svg.on('mouseup', handleVertexMouseUp);
-
-
-    
         svg.call(zoom as any, d3.zoomTransform)
 
-        // keep all the circle radii and line widths proportionate to the zooming scale (e.transform.k)
-        d3.selectAll('circle').attr('r', 5 / t.k)
-        
         return () => {
             svg.on('mousedown', null);
             svg.on('click', null);
@@ -114,7 +107,7 @@ export default function D3Annotator(props: annotatorProps) {
             svg.selectAll(".polygon-group").remove().exit();
 
         };
-    }, [points, indexDragging, props.polygonPoints, props.isDrawing]);
+    }, [points, indexDragging, props.polygonPoints, props.isDrawing, t.x, t.y]);
    
     
 
@@ -148,7 +141,7 @@ export default function D3Annotator(props: annotatorProps) {
         /* given coordinates of the element (or pointer) in the container, return the proportional 
         coordinates depending on the zoom and pan. */
 
-
+        t = d3.zoomTransform(props.svgElement.current as Element);
         return t.invert([x,y])
     }
 
@@ -199,7 +192,7 @@ export default function D3Annotator(props: annotatorProps) {
     /* ********** POLYLINE DRAWING HANDLERS ********** */
 
 
-    function handleDrawMouseClick(event: MouseEvent) {
+    function handleDrawPolylineClick(event: MouseEvent) {
 
         /* Adds new point to polyline if newVertex is not closing the polygon. 
         Otherwise sets the polygonPoints array to hold the points of the polyline.
@@ -208,7 +201,9 @@ export default function D3Annotator(props: annotatorProps) {
 
         if (props.isDrawing) {
             const [offsetX, offsetY ] = d3.pointer(event, props.svgElement.current);
+            console.log(offsetX,offsetY)
             const [x,y] = getProportionalCoords(offsetX, offsetY)
+             //after panning, click twice and you will notice that this is x,y 2 dif pts. but offsetXY is not! this means smth is wrong wityh getpropcoords
             const newVertex: Vertex = { x: x, y: y};
             if (closingPoly(newVertex)) {
                 setPoints(prevPoints => prevPoints.splice(-1));
@@ -222,18 +217,16 @@ export default function D3Annotator(props: annotatorProps) {
                 setPolylineLen(polylineLen+1)
             }
         }
-        console.log("being called")
-        console.log(points)
     };
 
-    function handleDrawMouseDrag(event: MouseEvent) {
+    function handleDrawPolylineDrag(event: MouseEvent) {
 
         /* this is acting sorta buggy */
         
         if (props.isDrawing && points.length >= 1) {
-            const [offsetX, offsetY ] = d3.pointer(event, props.svgElement.current);
+            const [offsetX, offsetY] = d3.pointer(event, props.svgElement.current);
             const [x,y] = getProportionalCoords(offsetX, offsetY)
-            const newVertex: Vertex = { x: x, y: y};
+            const newVertex: Vertex = { x: x, y: y };
             setPoints((prevPoints) => {
                 const updatedPoints = [...prevPoints];
                 if (closingPoly(newVertex)) {

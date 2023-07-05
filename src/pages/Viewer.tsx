@@ -3,7 +3,6 @@ import Link from 'next/link';
 import D3Annotator from '../components/d3Annotator';
 import FormDialog from '../components/labelPopup';
 import styles from '../styles/svgAnnotator.module.css';
-import { Stage, Layer, Image } from 'react-konva';
 import useImage from 'use-image'
 
 
@@ -20,6 +19,7 @@ export default function Viewer(): JSX.Element {
   const [polygonLabels, setPolygonLabels] = useState<string[]>([]);
   const [polygonPoints, setPolygonPoints] = useState<Vertex[][]>([]);
   const [currentZoom, setCurrentZoom] = useState(1)
+
   useEffect(() => {
      svgRef.current = document.querySelector('svg'); // Get the reference to the <svg> element
   }, [svgRef]);
@@ -64,10 +64,10 @@ export default function Viewer(): JSX.Element {
         />
         <ul className = {styles.li}>
           {polygonPoints.map((polygon, i) => (
-            <li>
+            <li id = {i.toString()}>
               <h3>polygon {i} </h3>
-              {polygon.map(coords => (
-                <p>x: {coords.x}    y: {coords.y}</p>
+              {polygon.map((coords, j) => (
+                <p id = {j.toString()}>x: {coords.x}    y: {coords.y}</p>
               ))}
             </li>
           ))}
