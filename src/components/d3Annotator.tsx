@@ -2,6 +2,8 @@ import React, { useState, useLayoutEffect, useEffect, RefObject, DragEvent } fro
 import * as d3 from 'd3'
 import styles from '../styles/svgAnnotator.module.css';
 
+
+
 interface Point {
     x: number;
     y: number;
@@ -16,6 +18,12 @@ interface annotatorProps {
     width: number | undefined
     height: number | undefined
     setCurrentZoom: any
+    setLabelsfr: any
+}
+
+interface labelData {
+    label: string
+    coords: Point
 }
 
 export default function D3Annotator(props: annotatorProps) {
@@ -24,7 +32,7 @@ export default function D3Annotator(props: annotatorProps) {
     const [polylineLen, setPolylineLen] = useState(0)
     const [vertexDragging, setVertexDragging] = useState<number[] | null>(null) // the index of the vertex being dragged
     const svg = d3.select(props.svgElement.current)
-    let t: any
+    let t: d3.ZoomTransform
     if (props.svgElement.current) {
         t = d3.zoomTransform(props.svgElement.current as Element);
     }
@@ -111,11 +119,6 @@ export default function D3Annotator(props: annotatorProps) {
             )
             .attr('transform', t.toString())
 
-
-
-
-
-        
         svg.on('mousedown', handleDrawPolylineClick) 
         svg.on('mousemove', function(e) {
             handleDrawPolylineDrag(e);
@@ -135,8 +138,26 @@ export default function D3Annotator(props: annotatorProps) {
             svg.on('zoom', null)
             svg.select("#drawing_polygon").remove()
         };
-    }, [points, vertexDragging, props.polygonPoints, props.isDrawing, t]);
+    }, [points, props.polygonPoints, props.isDrawing, t]);
    
+
+
+    useEffect(() => {
+        const labels: labelData[] = []
+        svg.selectAll('.polygon-group').each(function() {
+            const bbox = (this as SVGSVGElement).getBBox()
+            const right = bbox.x + bbox.width
+            const bottom = bbox.y + bbox.height
+            const proportionalCoords = getProportionalCoords(right,bottom)
+            const i = parseInt(d3.select(this).attr('id'))
+            const label: labelData = {
+                label: props.polygonLabels[i],
+                coords: {x: proportionalCoords[0], y: proportionalCoords[1]}
+            }
+            labels.push(label)
+        })
+        props.setLabelsfr(labels)
+    }, [props.polygonPoints, t, props.polygonLabels])
 
 /* ********** ZOOM AND PAN HANDLERS ********** */
 
@@ -211,8 +232,8 @@ export default function D3Annotator(props: annotatorProps) {
             const newPoints: Point[] = []   
             circles.nodes().forEach((circle) => {
                 d3.select(circle)
-                    .attr('cx', d => d.x + e.dx)
-                    .attr('cy', d => d.y + e.dy)
+                    .attr('cx', (d => d.x + e.dx))
+                    .attr('cy', (d => d.y + e.dy))
                 const newPoint = {x: parseFloat(d3.select(circle).attr('cx')), y: parseFloat(d3.select(circle).attr('cy'))}
                 newPoints.push(newPoint);
             })
@@ -234,7 +255,6 @@ export default function D3Annotator(props: annotatorProps) {
 
         if (props.isDrawing) {
             const [offsetX, offsetY ] = d3.pointer(event, props.svgElement.current);
-            console.log(offsetX, event.offsetX)
             const [x,y] = getProportionalCoords(offsetX, offsetY)
              //after panning, click twice and you will notice that this is x,y 2 dif pts. but offsetXY is not! this means smth is wrong wityh getpropcoords
             const newVertex: Point = { x: x, y: y};
@@ -302,5 +322,5 @@ export default function D3Annotator(props: annotatorProps) {
     }
 
 
-    return null; // D3Annotator doesn't render any additional content, it just adds to the existing svg
+    return null; // D3Annotator doesn't render additional content, it just adds to the existing svg
 }
