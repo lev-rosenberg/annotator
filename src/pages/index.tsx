@@ -1,10 +1,10 @@
 import React from 'react';
-import KonvaAnnotator from '../components/konvaAnnotator';
-import SvgAnnotator from '../components/svgAnnotator';
-import D3Annotator from '../components/d3Annotator'
-import PaperAnnotator from '../components/paperAnnotator'
-import SVGJSAnnotator from '../components/svgjsAnnotator'
-import TwoAnnotator from '../components/twoAnnotator'
+import KonvaAnnotator from '../components/mini-demos/konvaAnnotator';
+import SvgAnnotator from '../components/mini-demos/svgAnnotator';
+import { D3Annotator } from '../components/d3demo/d3Annotator'
+import PaperAnnotator from '../components/mini-demos/paperAnnotator'
+import SVGJSAnnotator from '../components/mini-demos/svgjsAnnotator'
+import TwoAnnotator from '../components/mini-demos/twoAnnotator'
 
 import Viewer from '../pages/Viewer'
 import Link from 'next/link'

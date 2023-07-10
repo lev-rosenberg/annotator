@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
-import D3Annotator from '../components/d3Annotator';
-import FormDialog from '../components/labelPopup';
+import { D3Annotator, Point } from '../components/d3demo/d3Annotator';
+import FormDialog from '../components/mini-demos/labelPopup';
 import styles from '../styles/svgAnnotator.module.css';
 import Chip from '@mui/material/Chip';
 
@@ -16,13 +16,13 @@ interface labelData {
   coords: Point
 }
 
+
 export default function Viewer(): JSX.Element {
 
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const [draw, setDraw] = useState<Boolean>(false)
+  const [isDrawing, setIsDrawing] = useState<Boolean>(false)
   const [dialogueOpen, setDialogueOpen] = useState<Boolean>(false)
   const [polygonLabels, setPolygonLabels] = useState<string[]>([]);
-  const [labelsfr, setLabelsfr] = useState<labelData[]>([])
   const [polygonPoints, setPolygonPoints] = useState<Vertex[][]>([]);
   const [currentZoom, setCurrentZoom] = useState(1)
 
@@ -38,19 +38,19 @@ export default function Viewer(): JSX.Element {
       </Link>
       <h1>D3 Annotator demo</h1>
       <h3>{currentZoom*100}%</h3>
-      <button onClick = {()=> setDraw(!draw)}>{draw ? "Stop drawing" : "Start drawing"}</button>
+      <button onClick = {()=> setIsDrawing(!isDrawing)}>{isDrawing ? "Stop drawing" : "Start drawing"}</button>
       <div style={{position: 'relative', width: 'fit-content', height: 'fit-content', margin: 'auto' }}>
         
         <svg
           className = {styles.svg}
           id = "svg"
           ref={svgRef}
-          width="1200"
-          height="800" 
+          width="1000"
+          height="600" 
         >
           <image href="/images/bubbles.jpeg" height="100%" width="100%" className = {styles.img}/>
         </svg>
-        {labelsfr.map((label) => {
+        {/* {labelsfr.map((label) => {
           return (
               <Chip 
                 label={label.label} 
@@ -63,10 +63,10 @@ export default function Viewer(): JSX.Element {
                 }} 
               />
           )
-        })}
+        })} */}
         <D3Annotator 
           svgElement={svgRef} 
-          isDrawing = {draw} 
+          isDrawing = {isDrawing} 
           setOpen={setDialogueOpen} 
           polygonLabels={polygonLabels}
           polygonPoints = {polygonPoints}
@@ -74,7 +74,6 @@ export default function Viewer(): JSX.Element {
           width={svgRef.current?.getBoundingClientRect().width}
           height={svgRef.current?.getBoundingClientRect().height}
           setCurrentZoom = {setCurrentZoom}
-          setLabelsfr = {setLabelsfr}
         />
         <FormDialog 
           open={dialogueOpen} 
