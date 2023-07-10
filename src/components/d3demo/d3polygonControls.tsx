@@ -1,5 +1,4 @@
 import * as d3 from 'd3'
-import { AnyArray } from 'immer/dist/internal'
 import { Point } from './d3Annotator'
 
 
@@ -19,6 +18,11 @@ export function handleSvgZoom(e:any) {
   d3.selectAll('circle').attr('r', 5 / t.k)
   d3.selectAll('polygon').attr('stroke-width', 2 / t.k)
   d3.selectAll('polyline').attr('stroke-width', 2 / t.k)
+  d3.selectAll('text')
+    .attr('font-size', 15 / t.k)
+    .attr('x', (d:any) => d[0].x + 12/t.k)
+    .attr('y', (d:any) => d[0].y + 12/t.k)
+
   }
 
 

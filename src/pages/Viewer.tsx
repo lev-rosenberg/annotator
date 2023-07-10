@@ -23,6 +23,7 @@ export default function Viewer(): JSX.Element {
   const [isDrawing, setIsDrawing] = useState<Boolean>(false)
   const [dialogueOpen, setDialogueOpen] = useState<Boolean>(false)
   const [polygonLabels, setPolygonLabels] = useState<string[]>([]);
+  const [lab, setLab] = useState<labelData[]>([])
   const [polygonPoints, setPolygonPoints] = useState<Vertex[][]>([]);
   const [currentZoom, setCurrentZoom] = useState(1)
 
@@ -50,7 +51,7 @@ export default function Viewer(): JSX.Element {
         >
           <image href="/images/bubbles.jpeg" height="100%" width="100%" className = {styles.img}/>
         </svg>
-        {/* {labelsfr.map((label) => {
+        {lab.map((label) => {
           return (
               <Chip 
                 label={label.label} 
@@ -63,17 +64,20 @@ export default function Viewer(): JSX.Element {
                 }} 
               />
           )
-        })} */}
+        })}
         <D3Annotator 
           svgElement={svgRef} 
           isDrawing = {isDrawing} 
           setOpen={setDialogueOpen} 
+          open = {dialogueOpen}
           polygonLabels={polygonLabels}
           polygonPoints = {polygonPoints}
           setPolygonPoints = {setPolygonPoints}
           width={svgRef.current?.getBoundingClientRect().width}
           height={svgRef.current?.getBoundingClientRect().height}
           setCurrentZoom = {setCurrentZoom}
+          setLab = {setLab}
+
         />
         <FormDialog 
           open={dialogueOpen} 

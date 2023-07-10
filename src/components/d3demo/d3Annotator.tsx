@@ -13,12 +13,14 @@ interface annotatorProps {
     svgElement: RefObject<SVGSVGElement>
     isDrawing: Boolean
     setOpen: any
+    open: Boolean
     polygonLabels: string[]
     polygonPoints: Point[][]
     setPolygonPoints: any
     width: number | undefined
     height: number | undefined
     setCurrentZoom: any
+    setLab: any
 }
 
 interface labelData {
@@ -35,6 +37,7 @@ export function D3Annotator(props: annotatorProps) {
     // (this doesn't always correspond with points. something i should rewrite cause it's unnesesarily complicated)
     const [polylineLen, setPolylineLen] = useState(0) 
 
+    const [dragging, setDragging] = useState(false)
     //the SVG overall layer
     const svg = d3.select(props.svgElement.current)
 
@@ -53,7 +56,7 @@ export function D3Annotator(props: annotatorProps) {
             .join(
                 enter => {
                     const polyline = enter.append('polyline').attr('class', 'drawing-polygon')
-                    .attr('id', 'drawing_polygon')
+                    .attr('id', 'drawing-polygon')
                     .attr('stroke', 'white')
                     .attr('fill', 'none')
                     .attr('stroke-width', 2 / t.k)
@@ -67,7 +70,7 @@ export function D3Annotator(props: annotatorProps) {
                         .attr('points', (d => convertPoints(d))) // Update the points attribute of the polygon
                         .attr('stroke', 'white')
                     return update
-                },
+                }
             )
             .attr('transform', t.toString())
 
@@ -88,15 +91,20 @@ export function D3Annotator(props: annotatorProps) {
                         .attr('r', 5)
                         .attr('fill', (props.isDrawing ? 'none' : 'white'))
                         .attr('fill-opacity', '0.5')
-                        .attr('id', (pt, i) => i)
                         .attr('class', styles.draggable)
-                        
                     polygon.append('polygon')
                         .attr('class', styles.polygon)
                         .attr('stroke', 'white')
                         .attr('stroke-width', 2 / t.k)
                         .attr('fill', 'none')
                         .attr('points', (d => convertPoints(d)));
+                    polygon.append('text')
+                        .text((d, i) => props.polygonLabels[i])
+                        .attr('fill', 'white')
+                        .attr('x', d => d[0].x + 12/t.k)
+                        .attr('y', d => d[0].y + 12/t.k)
+                        .attr('font-size', 15 / t.k) 
+                        .attr('class', styles.labelchip)
                     return polygon;
                 },
                 update => {
@@ -112,12 +120,23 @@ export function D3Annotator(props: annotatorProps) {
                     update
                       .select('polygon')
                       .attr('points', (d => convertPoints(d))) // Update the points attribute of the polygon
-
+                    update
+                        .select('text')
+                        .text((d, i) => props.polygonLabels[i])
+                        .attr('x', d => d[0].x + 12/t.k)
+                        .attr('y', d => d[0].y + 12/t.k)
                     return update;
-                  }
+                  },
+                exit => {
+                    exit
+                        .transition()
+                        .duration(500)
+                        .style('opacity', 0)
+                        .remove()
+                }
             )
             .attr('transform', t.toString())
-            
+            console.log(props.polygonLabels)
         svg.on('mousedown', handleDrawPolylineClick) 
         svg.on('mousemove', function(e) {
             handleDrawPolylineMove(e);
@@ -128,10 +147,21 @@ export function D3Annotator(props: annotatorProps) {
 
         svg.selectAll('.polygon-group').on("contextmenu", function (e) {
             e.preventDefault();
-            handlePolygonDelete(this)
+            handlePolygonDelete(this as Element)
         });
 
-const labels: labelData[] = []
+        return () => {
+            svg.on('mousedown', null);
+            svg.on('click', null);
+            svg.on('mousemove', null);
+            svg.on('mouseup', null);
+            svg.on('zoom', null);
+            svg.select("#drawing-polygon").remove();
+        };
+    }, [points, props.polygonPoints, props.isDrawing, t, props.polygonLabels]);
+   
+    useEffect(() => {
+        const labels: labelData[] = []
         svg.selectAll('.polygon-group').each(function() {
             const bbox = (this as SVGSVGElement).getBBox()
             const right = bbox.x + bbox.width
@@ -144,24 +174,21 @@ const labels: labelData[] = []
             }
             labels.push(label)
         })
-        console.log(props.polygonPoints)
+        props.setLab(labels)
+        
 
-        return () => {
-            svg.on('mousedown', null);
-            svg.on('click', null);
-            svg.on('mousemove', null);
-            svg.on('mouseup', null);
-            svg.on('zoom', null);
-            svg.select("#drawing_polygon").remove();
-        };
-    }, [points, props.polygonPoints, props.isDrawing, t]);
-   
-
+    }, [t, dragging, props.open, t])
 /* ********** ZOOM AND PAN HANDLERS ********** */
 
     const zoom = d3.zoom().scaleExtent([1, 10]).translateExtent([[0,0],[width!, height!]])
+        .on("start", function(e) {
+            t = e.transform;
+        })
         .on("zoom", function(e) {
             controls.handleSvgZoom(e);
+            t = e.transform;
+        })
+        .on("end", function(e) {
             t = e.transform;
         })
 
@@ -169,18 +196,22 @@ const labels: labelData[] = []
 /* ********** DRAGGING HANDLERS ********** */
 
     const circleDrag = d3.drag()
+        .on('start', () => setDragging(true))
         .on('drag', function(e) {
             if (!props.isDrawing) {
                 controls.handleVertexDrag(this, e, props.polygonPoints, props.setPolygonPoints)
             }
             
         })
+        .on('end', () => setDragging(false))
     const polyDrag = d3.drag()
+        .on('start', () => setDragging(true))
         .on('drag', function(e) {
             if (!props.isDrawing) {
                 controls.handlePolygonDrag(this, e, t, props.polygonPoints, props.setPolygonPoints)
             }
         })
+        .on('end', () => setDragging(false))
 
     /* ********** POLYLINE DRAWING HANDLERS ********** */
 
@@ -234,15 +265,16 @@ const labels: labelData[] = []
     /* ********** POLYGON DELETION ********** */
     
     function handlePolygonDelete(polygon: Element) {
+        console.log(polygon)
         if (d3.select(polygon).attr('class') == 'polygon-group') {
             const p = d3.select(polygon)
             const index = parseInt(p.attr('id'))
-
+            
             var updatedPoints = [...props.polygonPoints];
             updatedPoints.splice(index, 1);
             props.setPolygonPoints(updatedPoints);
 
-            p.data([]).exit().remove();
+           
            
         }
     }
