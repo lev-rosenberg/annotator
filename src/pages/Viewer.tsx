@@ -11,22 +11,30 @@ import { labelData, Point } from '../types/svgTypes'
 export default function Viewer(): JSX.Element {
 
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const divRef = useRef<HTMLDivElement | undefined>()
   const imageRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState<Boolean>(false)
-  const [dialogueOpen, setDialogueOpen] = useState<Boolean>(false)
+  const [isDrawing, setIsDrawing] = useState<boolean>(false)
+  const [dialogueOpen, setDialogueOpen] = useState<boolean>(false)
   const [polygonLabels, setPolygonLabels] = useState<labelData[]>([]);
   const [polygonPoints, setPolygonPoints] = useState<Point[][]>([]);
   const [currentZoom, setCurrentZoom] = useState(1)
+  const [dimensions, setDimensions] = useState([])
+  const [scaleFactor, setScaleFactor] = useState(1)
   
-  let height = 0
-  let width = 0
   useEffect(() => {
-    height = imageRef.current?.getBoundingClientRect().height
-    width = imageRef.current?.getBoundingClientRect().width
-
-    console.log(width, height)
+    const img = new Image();
+    img.onload = function(){
+     setDimensions([img.naturalWidth, img.naturalHeight])
+    };
+    img.src = "/images/maddoxdev.jpg"
   }, [])
-  //console.log(height)
+  const divWidth = divRef.current?.clientWidth
+  const scale = dimensions[1]/divWidth
+  console.log(scale)
+  //setScaleFactor(scale)
+
+
+  // console.log(scaleFactor)
 
   return (
     <div>
@@ -37,35 +45,33 @@ export default function Viewer(): JSX.Element {
       {/* <h2>{dims[0]}, {dims[1]}</h2> */}
       <h3>{currentZoom*100}%</h3>
       <button onClick = {()=> setIsDrawing(!isDrawing)}>{isDrawing ? "Stop drawing" : "Start drawing"}</button>
-      <div style={{position: 'relative', width: '80vw', height: '60.5vh', margin: 'auto' }}>
+      <div 
+        ref = {divRef}
+        style={{position: 'relative', width: '80vw', height: '40vh', margin: 'auto' }}>
         <svg
           ref={svgRef}
           className = {styles.svg}
           id = "parent"
-
-          // just having width & height doesn't work because then the polygons don't slide with the image.
-
-          // width = "100%"
+          width = "100%"
           // height = "100%"
-          //preserveAspectRatio = "xMidYMid meet"
 
-
-          // this doesn't work because then the coordinate system is always changing on zoom, so the polygons don't stay in the right place
-          // viewBox={"0 0" + ` ${imageRef.current?.getBoundingClientRect().width}` + ` ${imageRef.current?.getBoundingClientRect().height}`}
-
-          // this is the closest one to work
-          viewBox="0 0 1000 362.52569580078125"
-
-          >
+          /*  TO DO: 
+          1) calculate a scale factor based on the width or height and the viewbox width or height size. 
+          2) be able to zoom to 100% of the ACTUAL image size
+          */
+          viewBox= {"0 0 " + `${dimensions[0]} ${dimensions[1]}`} // s
+        >
             
             <image 
               href="/images/maddoxdev.jpg" 
+              id = "hi"
               ref = {imageRef} 
-              // having just a width no height is useful so that the height of the image doesn't automatically match the container
+              preserveAspectRatio = "none"
               width = "100%"
               className = {styles.img}
             />
         </svg>
+
         {/* {polygonLabels.map((label, i) => {
           return (
               <Chip 
@@ -93,6 +99,7 @@ export default function Viewer(): JSX.Element {
           polygonPoints = {polygonPoints}
           setPolygonPoints = {setPolygonPoints}
           setCurrentZoom = {setCurrentZoom}
+          scaleFactor = {scale}
         />
         {/* <FormDialog 
           dialogueOpen={dialogueOpen} 

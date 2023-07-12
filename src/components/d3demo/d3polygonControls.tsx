@@ -5,7 +5,7 @@ import { Point } from '../../types/svgTypes'
 
 /* ********** ZOOM AND PAN FUNCTIONS ********** */
 
-export function handleSvgZoom(e:any) {
+export function handleSvgZoom(e:any, scale: number) {
 
   /* make all svg groups transform proportionate to the current zoom and pan */
   const t = e.transform
@@ -15,9 +15,9 @@ export function handleSvgZoom(e:any) {
   //d3.selectAll('#child').attr('transform', t.toString())
 
   // keep all the circle radii and line widths proportionate to the zooming scale (e.transform.k)
-  d3.selectAll('circle').attr('r', 5 / t.k)
-  d3.selectAll('polygon').attr('stroke-width', 2 / t.k)
-  d3.selectAll('polyline').attr('stroke-width', 2 / t.k)
+  d3.selectAll('circle').attr('r', (10*scale) / t.k)
+  d3.selectAll('polygon').attr('stroke-width', (5*scale) / t.k)
+  d3.selectAll('polyline').attr('stroke-width', (5*scale) / t.k)
   }
 
 
@@ -32,7 +32,11 @@ export function getProportionalCoords(x: number, y: number, svg: SVGSVGElement |
 
 /* ********** DRAGING FUNCTIONS ********** */
 
-export function handleVertexDrag(vertex: Element, e: MouseEvent, polygonPoints: Point[][], setPolygonPoints: Function) {
+export function handleVertexDrag(
+  vertex: Element, 
+  e: MouseEvent, 
+  polygonPoints: Point[][], 
+  setPolygonPoints: Function) {
 
   const dragCircle = d3.select(vertex)
   const polygonGroup = d3.select(vertex.parentElement)
@@ -51,22 +55,28 @@ export function handleVertexDrag(vertex: Element, e: MouseEvent, polygonPoints: 
   setPolygonPoints(updatedPoints)
 }
 
-export function handlePolygonDrag(polygon: Element, e: any, t: d3.ZoomTransform, polygonPoints: Point[][], setPolygonPoints: Function) {
-  const polygonGroup = d3.select(polygon)
-  const circles = polygonGroup.selectAll('circle');
-  const index = parseInt(polygonGroup.attr('id'));
-  const newPoints: Point[] = []
-  circles.nodes().forEach((circle) => {
-      d3.select(circle)
-          .attr('cx', ((d: any) => d.x + e.dx/t.k))
-          .attr('cy', ((d: any) => d.y + e.dy/t.k))
-      const newPoint = {x: parseFloat(d3.select(circle).attr('cx')), y: parseFloat(d3.select(circle).attr('cy'))}
-      newPoints.push(newPoint);
-  })
-  let updatedPoints = [...polygonPoints]
-  updatedPoints[index] = newPoints
-  setPolygonPoints(updatedPoints)
-}
+export function handlePolygonDrag(
+  polygon: Element, 
+  e: any, 
+  t: d3.ZoomTransform, 
+  polygonPoints: Point[][], 
+  setPolygonPoints: Function) {
+
+    const polygonGroup = d3.select(polygon)
+    const circles = polygonGroup.selectAll('circle');
+    const index = parseInt(polygonGroup.attr('id'));
+    const newPoints: Point[] = []
+    circles.nodes().forEach((circle) => {
+        d3.select(circle)
+            .attr('cx', ((d: any) => d.x + e.dx/t.k))
+            .attr('cy', ((d: any) => d.y + e.dy/t.k))
+        const newPoint = {x: parseFloat(d3.select(circle).attr('cx')), y: parseFloat(d3.select(circle).attr('cy'))}
+        newPoints.push(newPoint);
+    })
+    let updatedPoints = [...polygonPoints]
+    updatedPoints[index] = newPoints
+    setPolygonPoints(updatedPoints)
+  }
 
 
 export function handleDrawPolylineOnClick(

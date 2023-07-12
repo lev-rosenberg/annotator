@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, RefObject, Dispatch } from 'react';
+import { useState, useEffect, useLayoutEffect, RefObject, Dispatch, SetStateAction } from 'react';
 import * as d3 from 'd3'
 import styles from '../../styles/svgAnnotator.module.css';
 import * as controls from './d3polygonControls';
@@ -8,14 +8,15 @@ import { labelData, Point } from '../../types/svgTypes';
 interface annotatorProps {
     svgElement: RefObject<SVGSVGElement>
     isDrawing: Boolean
-    setIsDrawing: Dispatch<boolean>
-    setDialogueOpen: Dispatch<boolean>
+    setIsDrawing: Dispatch<SetStateAction<boolean>>
+    setDialogueOpen: Dispatch<SetStateAction<boolean>>
     dialogueOpen: Boolean
     polygonLabels: labelData[]
-    setPolygonLabels: Dispatch<labelData[]>
+    setPolygonLabels: Dispatch<SetStateAction<labelData[]>>
     polygonPoints: Point[][]
-    setPolygonPoints: Dispatch<Point[][]>
+    setPolygonPoints: Dispatch<SetStateAction<Point[][]>>
     setCurrentZoom: Dispatch<number>
+    scaleFactor: number
 }
 
 export function D3Annotator(props: annotatorProps) {
@@ -37,6 +38,8 @@ export function D3Annotator(props: annotatorProps) {
     let t: d3.ZoomTransform
     props.svgElement.current ? (t = d3.zoomTransform(props.svgElement.current as Element)) : (t = d3.zoomIdentity)
     
+    const scale = props.scaleFactor
+
     useLayoutEffect(() => {
 
         //this is the polygon being drawn onClick
@@ -48,7 +51,7 @@ export function D3Annotator(props: annotatorProps) {
                     .attr('id', 'drawing-polygon')
                     .attr('stroke', 'red')
                     .attr('fill', 'none')
-                    .attr('stroke-width', 2 / t.k)
+                    .attr('stroke-width', (5*scale) / t.k)
                     .attr('points', d => convertPoints(d)) 
                 ,
                 update => 
@@ -73,14 +76,14 @@ export function D3Annotator(props: annotatorProps) {
                         .attr('cx', (pt) => pt.x) // Use the initial vertex's x-coordinate
                         .attr('cy', (pt) => pt.y) // Use the initial vertex's y-coordinate
                         .attr('id', (d, i, j) => j.length)
-                        .attr('r', 5/t.k)
+                        .attr('r', (10*scale)/t.k)
                         .attr('fill', (props.isDrawing ? 'none' : 'red'))
                         .attr('fill-opacity', '0.5')
                         .attr('class', styles.draggable)
                     polygon.append('polygon')
                         .attr('class', styles.polygon)
                         .attr('stroke', 'red')
-                        .attr('stroke-width', 2 / t.k)
+                        .attr('stroke-width', (5*scale) / t.k)
                         .attr('fill', 'none')
                         .attr('points', (d => convertPoints(d)));
                     return polygon;
@@ -93,10 +96,11 @@ export function D3Annotator(props: annotatorProps) {
                       .attr('cx', (pt) => pt.x) // update the vertex's x-coordinate
                       .attr('cy', (pt) => pt.y) // update the vertex's y-coordinate
                       .attr('fill', (props.isDrawing ? 'none' : 'red')) // props.isDrawing may have updated as well
-                      .attr('r', 5 / t.k) 
+                      .attr('r', (10*scale) / t.k) 
                 
                     update
                       .select('polygon')
+                      .attr('stroke-width', (5*scale) / t.k)
                       .attr('points', (d => convertPoints(d))) // Update the points attribute of the polygon
                     return update;
                   },
@@ -109,6 +113,15 @@ export function D3Annotator(props: annotatorProps) {
                 }
             )
             .attr('transform', t.toString())
+            
+            
+
+            // svg.selectAll('circle').attr("transform","scale(0.5)")
+            // svg.selectAll('polygon').attr("transform","scale(0.5)")
+
+
+
+
 
         if (props.isDrawing) {
             svg.on('mousedown', function(e) {
@@ -170,7 +183,7 @@ export function D3Annotator(props: annotatorProps) {
         })
         .on("zoom", function(e) {
             controls.handleSvgZoom(e);
-            props.setCurrentZoom(e.transform.k)
+            props.setCurrentZoom(e.transform.k, scale)
             t = e.transform;
         })
         .on("end", function(e) {
@@ -232,17 +245,18 @@ export function D3Annotator(props: annotatorProps) {
 
             
             let updatedPoints = [...props.polygonPoints]
-            console.log(props.polygonPoints)
-            updatedPoints.splice(index, 1)
-            props.setPolygonPoints(updatedPoints);
-            // props.setPolygonPoints(prevPolygonPoints => [...prevPolygonPoints].splice(index+1, 1));
-            console.log(props.polygonPoints)
+            // updatedPoints.splice(index, 1)
+            // props.setPolygonPoints(updatedPoints);
+            props.setPolygonPoints(prevPolygonPoints => (
+                
+                [...prevPolygonPoints].splice(index+1, 1)
+                ));
 
-            let updatedLabels = [...props.polygonLabels]
-            updatedLabels.splice(index, 1)
-            props.setPolygonLabels(updatedLabels);
+            // let updatedLabels = [...props.polygonLabels]
+            // updatedLabels.splice(index, 1)
+            // props.setPolygonLabels(updatedLabels);
 
-            // props.setPolygonLabels(prevPolygonLabels => [...prevPolygonLabels].splice(index+1, 1));
+            props.setPolygonLabels(prevPolygonLabels => [...prevPolygonLabels].splice(index+1, 1));
         }
     }
 
