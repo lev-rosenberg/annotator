@@ -1,31 +1,21 @@
-import { useState, useEffect, RefObject } from 'react';
+import { useState, useEffect, useLayoutEffect, RefObject, Dispatch } from 'react';
 import * as d3 from 'd3'
 import styles from '../../styles/svgAnnotator.module.css';
-import * as controls from './d3polygonControls'
+import * as controls from './d3polygonControls';
+import { labelData, Point } from '../../types/svgTypes';
 
-
-export interface Point {
-    x: number;
-    y: number;
-}
 
 interface annotatorProps {
     svgElement: RefObject<SVGSVGElement>
     isDrawing: Boolean
-    setOpen: any
-    open: Boolean
-    polygonLabels: string[]
+    setIsDrawing: Dispatch<boolean>
+    setDialogueOpen: Dispatch<boolean>
+    dialogueOpen: Boolean
+    polygonLabels: labelData[]
+    setPolygonLabels: Dispatch<labelData[]>
     polygonPoints: Point[][]
-    setPolygonPoints: any
-    width: number | undefined
-    height: number | undefined
-    setCurrentZoom: any
-    setLab: any
-}
-
-interface labelData {
-    label: string
-    coords: Point
+    setPolygonPoints: Dispatch<Point[][]>
+    setCurrentZoom: Dispatch<number>
 }
 
 export function D3Annotator(props: annotatorProps) {
@@ -38,39 +28,34 @@ export function D3Annotator(props: annotatorProps) {
     const [polylineLen, setPolylineLen] = useState(0) 
 
     const [dragging, setDragging] = useState(false)
+    const [zooming, setZooming] = useState(false)
+    const [isSelected, setIsSelected] = useState(null)
+
     //the SVG overall layer
     const svg = d3.select(props.svgElement.current)
-
     //the state of the zoom and pan of the svg
     let t: d3.ZoomTransform
     props.svgElement.current ? (t = d3.zoomTransform(props.svgElement.current as Element)) : (t = d3.zoomIdentity)
     
+    useLayoutEffect(() => {
 
-    const width = props.width 
-    const height = props.height
-    useEffect(() => {
- 
         //this is the polygon being drawn onClick
         const current_polyline = svg.selectAll('.drawing-polyline')
             .data([points])
             .join(
-                enter => {
-                    const polyline = enter.append('polyline').attr('class', 'drawing-polygon')
+                enter => 
+                    enter.append('polyline').attr('class', 'drawing-polygon')
                     .attr('id', 'drawing-polygon')
-                    .attr('stroke', 'white')
+                    .attr('stroke', 'red')
                     .attr('fill', 'none')
                     .attr('stroke-width', 2 / t.k)
                     .attr('points', d => convertPoints(d)) 
-                    
-                    return polyline
-                },
-                update => {
+                ,
+                update => 
                     update
-                        .select('.drawing-polygon')
                         .attr('points', (d => convertPoints(d))) // Update the points attribute of the polygon
-                        .attr('stroke', 'white')
-                    return update
-                }
+                        .attr('stroke', 'blakc')
+                
             )
             .attr('transform', t.toString())
 
@@ -79,7 +64,6 @@ export function D3Annotator(props: annotatorProps) {
         // this is the previously drawn polygons, with circles at each vertex.
         const past_polygons = svg.selectAll('.polygon-group')
             .data(props.polygonPoints as Point[][]) // associate each polygon with an element of polygonPoints[][]
-
             .join(
                 enter => {
                     const polygon = enter.append('g').attr('class', 'polygon-group').attr('id', (d, i) => i)
@@ -88,23 +72,17 @@ export function D3Annotator(props: annotatorProps) {
                         .join('circle') // Append a circle for each vertex
                         .attr('cx', (pt) => pt.x) // Use the initial vertex's x-coordinate
                         .attr('cy', (pt) => pt.y) // Use the initial vertex's y-coordinate
-                        .attr('r', 5)
-                        .attr('fill', (props.isDrawing ? 'none' : 'white'))
+                        .attr('id', (d, i, j) => j.length)
+                        .attr('r', 5/t.k)
+                        .attr('fill', (props.isDrawing ? 'none' : 'red'))
                         .attr('fill-opacity', '0.5')
                         .attr('class', styles.draggable)
                     polygon.append('polygon')
                         .attr('class', styles.polygon)
-                        .attr('stroke', 'white')
+                        .attr('stroke', 'red')
                         .attr('stroke-width', 2 / t.k)
                         .attr('fill', 'none')
                         .attr('points', (d => convertPoints(d)));
-                    polygon.append('text')
-                        .text((d, i) => props.polygonLabels[i])
-                        .attr('fill', 'white')
-                        .attr('x', d => d[0].x + 12/t.k)
-                        .attr('y', d => d[0].y + 12/t.k)
-                        .attr('font-size', 15 / t.k) 
-                        .attr('class', styles.labelchip)
                     return polygon;
                 },
                 update => {
@@ -114,17 +92,12 @@ export function D3Annotator(props: annotatorProps) {
                       .data(d => d)
                       .attr('cx', (pt) => pt.x) // update the vertex's x-coordinate
                       .attr('cy', (pt) => pt.y) // update the vertex's y-coordinate
-                      .attr('fill', (props.isDrawing ? 'none' : 'white')) // props.isDrawing may have updated as well
+                      .attr('fill', (props.isDrawing ? 'none' : 'red')) // props.isDrawing may have updated as well
                       .attr('r', 5 / t.k) 
                 
                     update
                       .select('polygon')
                       .attr('points', (d => convertPoints(d))) // Update the points attribute of the polygon
-                    update
-                        .select('text')
-                        .text((d, i) => props.polygonLabels[i])
-                        .attr('x', d => d[0].x + 12/t.k)
-                        .attr('y', d => d[0].y + 12/t.k)
                     return update;
                   },
                 exit => {
@@ -136,10 +109,16 @@ export function D3Annotator(props: annotatorProps) {
                 }
             )
             .attr('transform', t.toString())
-            console.log(props.polygonLabels)
-        svg.on('mousedown', handleDrawPolylineClick) 
+
+        if (props.isDrawing) {
+            svg.on('mousedown', function(e) {
+                controls.handleDrawPolylineOnClick(e, props.svgElement, points, setPoints, props.polygonPoints, props.setPolygonPoints, setPolylineLen, 
+                    props.setDialogueOpen,
+                    props.setIsDrawing, t)
+            });
+        }
         svg.on('mousemove', function(e) {
-            handleDrawPolylineMove(e);
+            handlePolylineMouseMove(e, );
             });        
         svg.selectAll('circle').call(circleDrag as any)
         svg.selectAll('.polygon-group').call(polyDrag as any)
@@ -147,7 +126,7 @@ export function D3Annotator(props: annotatorProps) {
 
         svg.selectAll('.polygon-group').on("contextmenu", function (e) {
             e.preventDefault();
-            handlePolygonDelete(this as Element)
+            handlePolygonDelete(this)
         });
 
         return () => {
@@ -168,30 +147,36 @@ export function D3Annotator(props: annotatorProps) {
             const bottom = bbox.y + bbox.height
             const proportionalCoords = t.apply([right, bottom]);
             const i = parseInt(d3.select(this).attr('id'))
-            const label: labelData = {
-                label: props.polygonLabels[i],
-                coords: {x: proportionalCoords[0], y: proportionalCoords[1]}
+
+            const polyPoints = d3.select(this).attr('points')
+            if (props.polygonLabels[i]) {
+                const label = props.polygonLabels[i]
+                label.coords = {x: proportionalCoords[0], y: proportionalCoords[1]}
+                label.visible = (zooming) ? false : true
+                labels.push(label)
             }
-            labels.push(label)
         })
-        props.setLab(labels)
+        props.setPolygonLabels(labels)
         
 
-    }, [t, dragging, props.open, t])
+    }, [t, dragging, zooming, props.dialogueOpen])
 /* ********** ZOOM AND PAN HANDLERS ********** */
 
-    const zoom = d3.zoom().scaleExtent([1, 10]).translateExtent([[0,0],[width!, height!]])
+    const zoom = d3.zoom().scaleExtent([0.5, 10])
+    //.translateExtent([[0,0],[1500, 600]])
         .on("start", function(e) {
             t = e.transform;
+            setZooming(true)
         })
         .on("zoom", function(e) {
             controls.handleSvgZoom(e);
+            props.setCurrentZoom(e.transform.k)
             t = e.transform;
         })
         .on("end", function(e) {
             t = e.transform;
+            setZooming(false)
         })
-
 
 /* ********** DRAGGING HANDLERS ********** */
 
@@ -215,33 +200,9 @@ export function D3Annotator(props: annotatorProps) {
 
     /* ********** POLYLINE DRAWING HANDLERS ********** */
 
-    function handleDrawPolylineClick(event: MouseEvent) {
 
-        /* Adds new point to polyline if newVertex is not closing the polygon. 
-        Otherwise sets the polygonPoints array to hold the points of the polyline.
-        And then rests the points array to empty in order to begin a new polyline. */
-        
 
-        if (props.isDrawing) {
-            const [offsetX, offsetY ] = d3.pointer(event, props.svgElement.current);
-            const [x,y] = controls.getProportionalCoords(offsetX, offsetY, props.svgElement.current);
-             //after panning, click twice and you will notice that this is x,y 2 dif pts. but offsetXY is not! this means smth is wrong wityh getpropcoords
-            const newVertex: Point = { x: x, y: y};
-            if (closingPoly(newVertex)) {
-                setPoints(prevPoints => prevPoints.splice(-1));
-                props.setPolygonPoints((prevPolygonPoints:Point[][]) => [...prevPolygonPoints, points]);
-                setPoints([]);
-                setPolylineLen(0)
-                props.setOpen(true)
-            }
-            else {
-                setPoints(prevPoints => [...prevPoints, newVertex]);
-                setPolylineLen(polylineLen+1)
-            }
-        }
-    };
-
-    function handleDrawPolylineMove(event: MouseEvent) {
+    function handlePolylineMouseMove(event: MouseEvent) {
 
         /* this is acting sorta buggy */
         
@@ -264,18 +225,24 @@ export function D3Annotator(props: annotatorProps) {
 
     /* ********** POLYGON DELETION ********** */
     
-    function handlePolygonDelete(polygon: Element) {
-        console.log(polygon)
+    function handlePolygonDelete(polygon: d3.BaseType) {
         if (d3.select(polygon).attr('class') == 'polygon-group') {
             const p = d3.select(polygon)
             const index = parseInt(p.attr('id'))
-            
-            var updatedPoints = [...props.polygonPoints];
-            updatedPoints.splice(index, 1);
-            props.setPolygonPoints(updatedPoints);
 
-           
-           
+            
+            let updatedPoints = [...props.polygonPoints]
+            console.log(props.polygonPoints)
+            updatedPoints.splice(index, 1)
+            props.setPolygonPoints(updatedPoints);
+            // props.setPolygonPoints(prevPolygonPoints => [...prevPolygonPoints].splice(index+1, 1));
+            console.log(props.polygonPoints)
+
+            let updatedLabels = [...props.polygonLabels]
+            updatedLabels.splice(index, 1)
+            props.setPolygonLabels(updatedLabels);
+
+            // props.setPolygonLabels(prevPolygonLabels => [...prevPolygonLabels].splice(index+1, 1));
         }
     }
 
@@ -307,6 +274,14 @@ export function D3Annotator(props: annotatorProps) {
 
         const converted = points.map((pt) => `${pt.x},${pt.y}`).join(' ')
         return converted
+    }
+
+    function findClosestPoint(points: Point[], point: Point) {
+        function distance(p1: Point, p2: Point) {
+            return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2))
+        }
+        const closest = points.reduce((a, b) => distance(a, point) < distance(b, point) ? a : b);
+        return closest
     }
 
 

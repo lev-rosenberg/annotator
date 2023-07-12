@@ -1,36 +1,32 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import Link from 'next/link';
-import { D3Annotator, Point } from '../components/d3demo/d3Annotator';
+import { D3Annotator } from '../components/d3demo/d3Annotator';
 import FormDialog from '../components/mini-demos/labelPopup';
 import styles from '../styles/svgAnnotator.module.css';
 import Chip from '@mui/material/Chip';
+import { labelData, Point } from '../types/svgTypes'
 
-
-interface Vertex {
-  x: number;
-  y: number;
-}
-
-interface labelData {
-  label: string
-  coords: Point
-}
 
 
 export default function Viewer(): JSX.Element {
 
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const imageRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState<Boolean>(false)
   const [dialogueOpen, setDialogueOpen] = useState<Boolean>(false)
-  const [polygonLabels, setPolygonLabels] = useState<string[]>([]);
-  const [lab, setLab] = useState<labelData[]>([])
-  const [polygonPoints, setPolygonPoints] = useState<Vertex[][]>([]);
+  const [polygonLabels, setPolygonLabels] = useState<labelData[]>([]);
+  const [polygonPoints, setPolygonPoints] = useState<Point[][]>([]);
   const [currentZoom, setCurrentZoom] = useState(1)
-
+  
+  let height = 0
+  let width = 0
   useEffect(() => {
-     svgRef.current = document.querySelector('svg'); // Get the reference to the <svg> element
-  }, [svgRef]);
+    height = imageRef.current?.getBoundingClientRect().height
+    width = imageRef.current?.getBoundingClientRect().width
 
+    console.log(width, height)
+  }, [])
+  //console.log(height)
 
   return (
     <div>
@@ -38,59 +34,78 @@ export default function Viewer(): JSX.Element {
         <h1>go back</h1>
       </Link>
       <h1>D3 Annotator demo</h1>
+      {/* <h2>{dims[0]}, {dims[1]}</h2> */}
       <h3>{currentZoom*100}%</h3>
       <button onClick = {()=> setIsDrawing(!isDrawing)}>{isDrawing ? "Stop drawing" : "Start drawing"}</button>
-      <div style={{position: 'relative', width: 'fit-content', height: 'fit-content', margin: 'auto' }}>
-        
+      <div style={{position: 'relative', width: '80vw', height: '60.5vh', margin: 'auto' }}>
         <svg
-          className = {styles.svg}
-          id = "svg"
           ref={svgRef}
-          width="1000"
-          height="600" 
-        >
-          <image href="/images/bubbles.jpeg" height="100%" width="100%" className = {styles.img}/>
+          className = {styles.svg}
+          id = "parent"
+
+          // just having width & height doesn't work because then the polygons don't slide with the image.
+
+          // width = "100%"
+          // height = "100%"
+          //preserveAspectRatio = "xMidYMid meet"
+
+
+          // this doesn't work because then the coordinate system is always changing on zoom, so the polygons don't stay in the right place
+          // viewBox={"0 0" + ` ${imageRef.current?.getBoundingClientRect().width}` + ` ${imageRef.current?.getBoundingClientRect().height}`}
+
+          // this is the closest one to work
+          viewBox="0 0 1000 362.52569580078125"
+
+          >
+            
+            <image 
+              href="/images/maddoxdev.jpg" 
+              ref = {imageRef} 
+              // having just a width no height is useful so that the height of the image doesn't automatically match the container
+              width = "100%"
+              className = {styles.img}
+            />
         </svg>
-        {lab.map((label) => {
+        {/* {polygonLabels.map((label, i) => {
           return (
               <Chip 
                 label={label.label} 
                 color="primary"
+                size = "small"
+                key = {i}
                 sx={{
                   position: 'absolute', 
-                  top: `${label.coords.y}px`, 
-                  left: `${label.coords.x}px`,
-                  zIndex: 'tooltip'
+                  top: `${label.coords?.y}px`, 
+                  left: `${label.coords?.x}px`,
+                  zIndex: label.visible ? '1' : '-5'
                 }} 
               />
           )
-        })}
+        })} */}
         <D3Annotator 
           svgElement={svgRef} 
           isDrawing = {isDrawing} 
-          setOpen={setDialogueOpen} 
-          open = {dialogueOpen}
+          setIsDrawing = {setIsDrawing}
+          setDialogueOpen={setDialogueOpen} 
+          dialogueOpen = {dialogueOpen}
           polygonLabels={polygonLabels}
+          setPolygonLabels = {setPolygonLabels}
           polygonPoints = {polygonPoints}
           setPolygonPoints = {setPolygonPoints}
-          width={svgRef.current?.getBoundingClientRect().width}
-          height={svgRef.current?.getBoundingClientRect().height}
           setCurrentZoom = {setCurrentZoom}
-          setLab = {setLab}
-
         />
-        <FormDialog 
-          open={dialogueOpen} 
-          setOpen={setDialogueOpen} 
-          labels = {polygonLabels} 
-          setLabels ={setPolygonLabels}
-        />
+        {/* <FormDialog 
+          dialogueOpen={dialogueOpen} 
+          setDialogueOpen={setDialogueOpen} 
+          polygonLabels={polygonLabels}
+          setPolygonLabels ={setPolygonLabels}
+        /> */}
         <ul className = {styles.li}>
           {polygonPoints.map((polygon, i) => (
-            <li id = {i.toString()}>
+            <li key = {i}>
               <h3>polygon {i} </h3>
               {polygon.map((coords, j) => (
-                <p id = {j.toString()}>x: {coords.x}    y: {coords.y}</p>
+                <p key = {j} >x: {coords.x}    y: {coords.y}</p>
               ))}
             </li>
           ))}

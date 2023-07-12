@@ -1,5 +1,6 @@
+import { RefObject, Dispatch, SetStateAction } from 'react';
 import * as d3 from 'd3'
-import { Point } from './d3Annotator'
+import { Point } from '../../types/svgTypes'
 
 
 /* ********** ZOOM AND PAN FUNCTIONS ********** */
@@ -7,22 +8,16 @@ import { Point } from './d3Annotator'
 export function handleSvgZoom(e:any) {
 
   /* make all svg groups transform proportionate to the current zoom and pan */
-
   const t = e.transform
-  // props.setCurrentZoom(t.k)
   d3.selectAll('.polygon-group').attr('transform', t.toString())
   d3.selectAll('polyline').attr('transform', t.toString())
   d3.selectAll('image').attr('transform', t.toString())
+  //d3.selectAll('#child').attr('transform', t.toString())
 
   // keep all the circle radii and line widths proportionate to the zooming scale (e.transform.k)
   d3.selectAll('circle').attr('r', 5 / t.k)
   d3.selectAll('polygon').attr('stroke-width', 2 / t.k)
   d3.selectAll('polyline').attr('stroke-width', 2 / t.k)
-  d3.selectAll('text')
-    .attr('font-size', 15 / t.k)
-    .attr('x', (d:any) => d[0].x + 12/t.k)
-    .attr('y', (d:any) => d[0].y + 12/t.k)
-
   }
 
 
@@ -45,19 +40,19 @@ export function handleVertexDrag(vertex: Element, e: MouseEvent, polygonPoints: 
   const index = parseInt(polygonGroup.attr('id'));
   const newPoints: Point[] = []
   dragCircle
-  .attr('cx', e.x)
-  .attr('cy', e.y);
+    .attr('cx', e.x)
+    .attr('cy', e.y);
   circles.nodes().forEach((circle) => {
       const newPoint = {x: parseFloat(d3.select(circle).attr('cx')), y: parseFloat(d3.select(circle).attr('cy'))}
       newPoints.push(newPoint);
   })
-  var updatedPoints = [...polygonPoints]
+  let updatedPoints = [...polygonPoints]
   updatedPoints[index] = newPoints
   setPolygonPoints(updatedPoints)
 }
 
-export function handlePolygonDrag(element: Element, e: any, t: d3.ZoomTransform, polygonPoints: Point[][], setPolygonPoints: Function) {
-  const polygonGroup = d3.select(element)
+export function handlePolygonDrag(polygon: Element, e: any, t: d3.ZoomTransform, polygonPoints: Point[][], setPolygonPoints: Function) {
+  const polygonGroup = d3.select(polygon)
   const circles = polygonGroup.selectAll('circle');
   const index = parseInt(polygonGroup.attr('id'));
   const newPoints: Point[] = []
@@ -68,7 +63,65 @@ export function handlePolygonDrag(element: Element, e: any, t: d3.ZoomTransform,
       const newPoint = {x: parseFloat(d3.select(circle).attr('cx')), y: parseFloat(d3.select(circle).attr('cy'))}
       newPoints.push(newPoint);
   })
-  var updatedPoints = [...polygonPoints]
+  let updatedPoints = [...polygonPoints]
   updatedPoints[index] = newPoints
   setPolygonPoints(updatedPoints)
+}
+
+
+export function handleDrawPolylineOnClick(
+  event: MouseEvent, 
+  svgElement: RefObject<SVGSVGElement>,
+  points: Point[], 
+  setPoints: Dispatch<SetStateAction<Point[]>>, 
+  polygonPoints: Point[][], 
+  setPolygonPoints: Dispatch<SetStateAction<Point[][]>>,
+  setPolylineLen: Dispatch<SetStateAction<number>>, 
+  setDialogueOpen: Dispatch<SetStateAction<boolean>>,
+  setIsDrawing: Dispatch<SetStateAction<boolean>>,
+  t: d3.ZoomTransform) {
+
+  /* Adds new point to polyline if newVertex is not closing the polygon. 
+  Otherwise sets the polygonPoints array to hold the points of the polyline.
+  And then rests the points array to empty in order to begin a new polyline. */
+ 
+      const [offsetX, offsetY ] = d3.pointer(event, svgElement.current);
+      const [x,y] = getProportionalCoords(offsetX, offsetY, svgElement.current);
+
+      const newVertex: Point = { x: x, y: y};
+      if (closingPoly(newVertex, points, t)) {
+          setPoints(prevPoints => prevPoints.splice(-1))
+
+          let updatedPoints = [...polygonPoints, points]
+          setPolygonPoints(updatedPoints)
+          //props.setPolygonPoints((prevPolygonPoints) => [...prevPolygonPoints, points]);
+          setPoints([]);
+          setPolylineLen(0)
+          setDialogueOpen(true)
+          setIsDrawing(false)
+      }
+      else {
+          setPoints((prevPoints) => [...prevPoints, newVertex]);
+          setPolylineLen(prevPolylineLen => prevPolylineLen+1)
+      }
+  
+};
+
+
+function closingPoly(v: Point, points: Point[], t: d3.ZoomTransform) {
+        
+  /* Checks to see if new vertex is attempting to close the polygon. 
+  There needs to be at least 4 existing points for a new vertex to make a polygon. 
+  And the new vertex must also be sufficiently close to the initial point in the polyline.
+
+  (4 because the smallest shape a triangle has 3 points, plus another point tracked by the
+      pointer that popped when the polygon is closed.) */
+
+  if (points.length >= 4) {
+      if (Math.abs(points[0].x - v.x) <= 7/t.k && 
+          Math.abs(points[0].y - v.y) <= 7/t.k) {
+          return true
+      }
+  }
+  return false
 }
