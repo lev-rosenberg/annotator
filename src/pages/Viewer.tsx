@@ -1,40 +1,49 @@
 import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
+import * as d3 from 'd3'
 import Link from 'next/link';
 import { D3Annotator } from '../components/d3demo/d3Annotator';
 import FormDialog from '../components/mini-demos/labelPopup';
 import styles from '../styles/svgAnnotator.module.css';
 import Chip from '@mui/material/Chip';
-import { labelData, Point } from '../types/svgTypes'
+import { Window, LabelData, Point } from '../types/svgTypes'
 
 
 
 export default function Viewer(): JSX.Element {
 
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const divRef = useRef<HTMLDivElement | undefined>()
-  const imageRef = useRef(null);
+  const divRef = useRef<HTMLDivElement | null>(null)
   const [isDrawing, setIsDrawing] = useState<boolean>(false)
   const [dialogueOpen, setDialogueOpen] = useState<boolean>(false)
-  const [polygonLabels, setPolygonLabels] = useState<labelData[]>([]);
+  const [polygonLabels, setPolygonLabels] = useState<LabelData[]>([]);
   const [polygonPoints, setPolygonPoints] = useState<Point[][]>([]);
   const [currentZoom, setCurrentZoom] = useState(1)
-  const [dimensions, setDimensions] = useState([])
-  const [scaleFactor, setScaleFactor] = useState(1)
+  const [imgDimensions, setImgDimensions] = useState<Window>()
+  const [divDimensions, setDivDimensions] = useState<Window>()
   
   useEffect(() => {
     const img = new Image();
     img.onload = function(){
-     setDimensions([img.naturalWidth, img.naturalHeight])
+      setImgDimensions({width: img.naturalWidth, height: img.naturalHeight})
     };
-    img.src = "/images/maddoxdev.jpg"
+    img.src = "/images/clear.jpeg"
+    
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
   }, [])
-  const divWidth = divRef.current?.clientWidth
-  const scale = dimensions[1]/divWidth
-  console.log(scale)
-  //setScaleFactor(scale)
+  
+  const scaleFactor = 1/(divDimensions?.width / imgDimensions?.width)
 
+  function handleResize() {
+    // if (divRef.current) {
+      setDivDimensions({
+        width: divRef.current?.clientWidth,
+        height: divRef.current?.clientHeight,
+      });
+    // }
+  }
 
-  // console.log(scaleFactor)
 
   return (
     <div>
@@ -44,35 +53,32 @@ export default function Viewer(): JSX.Element {
       <h1>D3 Annotator demo</h1>
       {/* <h2>{dims[0]}, {dims[1]}</h2> */}
       <h3>{currentZoom*100}%</h3>
-      <button onClick = {()=> setIsDrawing(!isDrawing)}>{isDrawing ? "Stop drawing" : "Start drawing"}</button>
       <div 
         ref = {divRef}
-        style={{position: 'relative', width: '80vw', height: '40vh', margin: 'auto' }}>
+        style = {{position: 'relative', width: '70vw', margin: 'auto' }}>
+        <button onClick = {()=> setIsDrawing(!isDrawing)}>{isDrawing ? "Stop drawing" : "Start drawing"}</button>
+
         <svg
-          ref={svgRef}
+          ref = {svgRef}
           className = {styles.svg}
           id = "parent"
           width = "100%"
-          // height = "100%"
-
           /*  TO DO: 
-          1) calculate a scale factor based on the width or height and the viewbox width or height size. 
-          2) be able to zoom to 100% of the ACTUAL image size
+          1) be able to zoom to 100% of the ACTUAL image size
+          2) labels at the correct vertex
+          3) move polygons from the middle
           */
-          viewBox= {"0 0 " + `${dimensions[0]} ${dimensions[1]}`} // s
+          viewBox= {"0 0 " + `${imgDimensions?.width} ${imgDimensions?.height}`} // s
         >
-            
             <image 
-              href="/images/maddoxdev.jpg" 
-              id = "hi"
-              ref = {imageRef} 
-              preserveAspectRatio = "none"
+              href="/images/clear.jpeg" 
               width = "100%"
               className = {styles.img}
             />
         </svg>
+        <button id = "reset" >Fit to container</button>
 
-        {/* {polygonLabels.map((label, i) => {
+        {polygonLabels.map((label, i) => {
           return (
               <Chip 
                 label={label.label} 
@@ -81,13 +87,13 @@ export default function Viewer(): JSX.Element {
                 key = {i}
                 sx={{
                   position: 'absolute', 
-                  top: `${label.coords?.y}px`, 
-                  left: `${label.coords?.x}px`,
+                  top: `${label.coords?.y/scaleFactor}px`, 
+                  left: `${label.coords?.x/scaleFactor}px`,
                   zIndex: label.visible ? '1' : '-5'
                 }} 
               />
           )
-        })} */}
+        })}
         <D3Annotator 
           svgElement={svgRef} 
           isDrawing = {isDrawing} 
@@ -99,14 +105,14 @@ export default function Viewer(): JSX.Element {
           polygonPoints = {polygonPoints}
           setPolygonPoints = {setPolygonPoints}
           setCurrentZoom = {setCurrentZoom}
-          scaleFactor = {scale}
+          scaleFactor = {scaleFactor}
         />
-        {/* <FormDialog 
+        <FormDialog 
           dialogueOpen={dialogueOpen} 
           setDialogueOpen={setDialogueOpen} 
           polygonLabels={polygonLabels}
           setPolygonLabels ={setPolygonLabels}
-        /> */}
+        />
         <ul className = {styles.li}>
           {polygonPoints.map((polygon, i) => (
             <li key = {i}>

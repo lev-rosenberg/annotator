@@ -12,12 +12,12 @@ export function handleSvgZoom(e:any, scale: number) {
   d3.selectAll('.polygon-group').attr('transform', t.toString())
   d3.selectAll('polyline').attr('transform', t.toString())
   d3.selectAll('image').attr('transform', t.toString())
-  //d3.selectAll('#child').attr('transform', t.toString())
+
 
   // keep all the circle radii and line widths proportionate to the zooming scale (e.transform.k)
-  d3.selectAll('circle').attr('r', (10*scale) / t.k)
-  d3.selectAll('polygon').attr('stroke-width', (5*scale) / t.k)
-  d3.selectAll('polyline').attr('stroke-width', (5*scale) / t.k)
+  d3.selectAll('circle').attr('r', (7*scale) / t.k)
+  d3.selectAll('polygon').attr('stroke-width', (2*scale) / t.k)
+  d3.selectAll('polyline').attr('stroke-width', (2*scale) / t.k)
   }
 
 
@@ -89,7 +89,8 @@ export function handleDrawPolylineOnClick(
   setPolylineLen: Dispatch<SetStateAction<number>>, 
   setDialogueOpen: Dispatch<SetStateAction<boolean>>,
   setIsDrawing: Dispatch<SetStateAction<boolean>>,
-  t: d3.ZoomTransform) {
+  t: d3.ZoomTransform, 
+  scale: number) {
 
   /* Adds new point to polyline if newVertex is not closing the polygon. 
   Otherwise sets the polygonPoints array to hold the points of the polyline.
@@ -99,7 +100,7 @@ export function handleDrawPolylineOnClick(
       const [x,y] = getProportionalCoords(offsetX, offsetY, svgElement.current);
 
       const newVertex: Point = { x: x, y: y};
-      if (closingPoly(newVertex, points, t)) {
+      if (closingPoly(newVertex, points, t, scale)) {
           setPoints(prevPoints => prevPoints.splice(-1))
 
           let updatedPoints = [...polygonPoints, points]
@@ -118,7 +119,7 @@ export function handleDrawPolylineOnClick(
 };
 
 
-function closingPoly(v: Point, points: Point[], t: d3.ZoomTransform) {
+export function closingPoly(v: Point, points: Point[], t: d3.ZoomTransform, scale: number) {
         
   /* Checks to see if new vertex is attempting to close the polygon. 
   There needs to be at least 4 existing points for a new vertex to make a polygon. 
@@ -128,8 +129,8 @@ function closingPoly(v: Point, points: Point[], t: d3.ZoomTransform) {
       pointer that popped when the polygon is closed.) */
 
   if (points.length >= 4) {
-      if (Math.abs(points[0].x - v.x) <= 7/t.k && 
-          Math.abs(points[0].y - v.y) <= 7/t.k) {
+      if (Math.abs(points[0].x - v.x) <= (7*scale)/t.k && 
+          Math.abs(points[0].y - v.y) <= (7*scale)/t.k) {
           return true
       }
   }

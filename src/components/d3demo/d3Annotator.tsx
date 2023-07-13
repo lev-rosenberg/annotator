@@ -2,7 +2,8 @@ import { useState, useEffect, useLayoutEffect, RefObject, Dispatch, SetStateActi
 import * as d3 from 'd3'
 import styles from '../../styles/svgAnnotator.module.css';
 import * as controls from './d3polygonControls';
-import { labelData, Point } from '../../types/svgTypes';
+import { LabelData, Point } from '../../types/svgTypes';
+import { FastLayer } from 'react-konva';
 
 
 interface annotatorProps {
@@ -11,8 +12,8 @@ interface annotatorProps {
     setIsDrawing: Dispatch<SetStateAction<boolean>>
     setDialogueOpen: Dispatch<SetStateAction<boolean>>
     dialogueOpen: Boolean
-    polygonLabels: labelData[]
-    setPolygonLabels: Dispatch<SetStateAction<labelData[]>>
+    polygonLabels: LabelData[]
+    setPolygonLabels: Dispatch<SetStateAction<LabelData[]>>
     polygonPoints: Point[][]
     setPolygonPoints: Dispatch<SetStateAction<Point[][]>>
     setCurrentZoom: Dispatch<number>
@@ -36,7 +37,7 @@ export function D3Annotator(props: annotatorProps) {
     const svg = d3.select(props.svgElement.current)
     //the state of the zoom and pan of the svg
     let t: d3.ZoomTransform
-    props.svgElement.current ? (t = d3.zoomTransform(props.svgElement.current as Element)) : (t = d3.zoomIdentity)
+    props.svgElement.current ? (t = d3.zoomTransform(props.svgElement.current)) : (t = d3.zoomIdentity)
     
     const scale = props.scaleFactor
 
@@ -51,7 +52,7 @@ export function D3Annotator(props: annotatorProps) {
                     .attr('id', 'drawing-polygon')
                     .attr('stroke', 'red')
                     .attr('fill', 'none')
-                    .attr('stroke-width', (5*scale) / t.k)
+                    .attr('stroke-width', (2*scale) / t.k)
                     .attr('points', d => convertPoints(d)) 
                 ,
                 update => 
@@ -76,14 +77,15 @@ export function D3Annotator(props: annotatorProps) {
                         .attr('cx', (pt) => pt.x) // Use the initial vertex's x-coordinate
                         .attr('cy', (pt) => pt.y) // Use the initial vertex's y-coordinate
                         .attr('id', (d, i, j) => j.length)
-                        .attr('r', (10*scale)/t.k)
+                        .attr('r', (7*scale)/t.k)
                         .attr('fill', (props.isDrawing ? 'none' : 'red'))
                         .attr('fill-opacity', '0.5')
                         .attr('class', styles.draggable)
+                        
                     polygon.append('polygon')
                         .attr('class', styles.polygon)
                         .attr('stroke', 'red')
-                        .attr('stroke-width', (5*scale) / t.k)
+                        .attr('stroke-width', (2*scale) / t.k)
                         .attr('fill', 'none')
                         .attr('points', (d => convertPoints(d)));
                     return polygon;
@@ -96,11 +98,11 @@ export function D3Annotator(props: annotatorProps) {
                       .attr('cx', (pt) => pt.x) // update the vertex's x-coordinate
                       .attr('cy', (pt) => pt.y) // update the vertex's y-coordinate
                       .attr('fill', (props.isDrawing ? 'none' : 'red')) // props.isDrawing may have updated as well
-                      .attr('r', (10*scale) / t.k) 
+                      .attr('r', (7*scale) / t.k) 
                 
                     update
                       .select('polygon')
-                      .attr('stroke-width', (5*scale) / t.k)
+                      .attr('stroke-width', (2*scale) / t.k)
                       .attr('points', (d => convertPoints(d))) // Update the points attribute of the polygon
                     return update;
                   },
@@ -114,20 +116,16 @@ export function D3Annotator(props: annotatorProps) {
             )
             .attr('transform', t.toString())
             
-            
-
-            // svg.selectAll('circle').attr("transform","scale(0.5)")
-            // svg.selectAll('polygon').attr("transform","scale(0.5)")
-
-
-
-
 
         if (props.isDrawing) {
             svg.on('mousedown', function(e) {
-                controls.handleDrawPolylineOnClick(e, props.svgElement, points, setPoints, props.polygonPoints, props.setPolygonPoints, setPolylineLen, 
-                    props.setDialogueOpen,
-                    props.setIsDrawing, t)
+                if (isWithinImage(e.x, e.y, scale)) {
+                    console.log(isWithinImage(e.x, e.y, scale))
+                    controls.handleDrawPolylineOnClick(e, props.svgElement, points, setPoints, props.polygonPoints, props.setPolygonPoints, setPolylineLen, 
+                        props.setDialogueOpen,
+                        props.setIsDrawing, t, scale)
+                }
+                
             });
         }
         svg.on('mousemove', function(e) {
@@ -142,6 +140,13 @@ export function D3Annotator(props: annotatorProps) {
             handlePolygonDelete(this)
         });
 
+        // reset button
+        d3.select("#reset").on("click", () => {
+            svg.transition()
+            .duration(250)
+            .call(zoom.transform as any, d3.zoomIdentity)
+        })
+
         return () => {
             svg.on('mousedown', null);
             svg.on('click', null);
@@ -152,19 +157,22 @@ export function D3Annotator(props: annotatorProps) {
         };
     }, [points, props.polygonPoints, props.isDrawing, t, props.polygonLabels]);
    
-    useEffect(() => {
-        const labels: labelData[] = []
-        svg.selectAll('.polygon-group').each(function() {
-            const bbox = (this as SVGSVGElement).getBBox()
-            const right = bbox.x + bbox.width
-            const bottom = bbox.y + bbox.height
-            const proportionalCoords = t.apply([right, bottom]);
-            const i = parseInt(d3.select(this).attr('id'))
 
-            const polyPoints = d3.select(this).attr('points')
+    useEffect(() => {
+        const labels: LabelData[] = []
+        svg.selectAll('.polygon-group').each(function() {
+
+            const bbox = (this as SVGSVGElement).getBBox()
+            const bottomRight: Point = {x: bbox.x + bbox.width, y: bbox.y + bbox.height}
+            
+            const i = parseInt(d3.select(this).attr('id'))
+            const polyPoints = d3.select(this).data()
+            const closest = findClosestPoint(polyPoints[0] as Point[], bottomRight)
+            const proportionalCoords = t.apply([closest.x, closest.y])
+
             if (props.polygonLabels[i]) {
                 const label = props.polygonLabels[i]
-                label.coords = {x: proportionalCoords[0], y: proportionalCoords[1]}
+                label.coords = {x: proportionalCoords[0] + 10, y: proportionalCoords[1] + 10}
                 label.visible = (zooming) ? false : true
                 labels.push(label)
             }
@@ -173,6 +181,7 @@ export function D3Annotator(props: annotatorProps) {
         
 
     }, [t, dragging, zooming, props.dialogueOpen])
+
 /* ********** ZOOM AND PAN HANDLERS ********** */
 
     const zoom = d3.zoom().scaleExtent([0.5, 10])
@@ -182,21 +191,25 @@ export function D3Annotator(props: annotatorProps) {
             setZooming(true)
         })
         .on("zoom", function(e) {
-            controls.handleSvgZoom(e);
-            props.setCurrentZoom(e.transform.k, scale)
+            controls.handleSvgZoom(e, scale);
+            props.setCurrentZoom(e.transform.k)
             t = e.transform;
         })
         .on("end", function(e) {
             t = e.transform;
             setZooming(false)
         })
+    
+        
+
+    
 
 /* ********** DRAGGING HANDLERS ********** */
 
     const circleDrag = d3.drag()
         .on('start', () => setDragging(true))
         .on('drag', function(e) {
-            if (!props.isDrawing) {
+            if (!props.isDrawing && isWithinImage(e.x + e.dx, e.y + e.dy, scale)) {
                 controls.handleVertexDrag(this, e, props.polygonPoints, props.setPolygonPoints)
             }
             
@@ -205,8 +218,11 @@ export function D3Annotator(props: annotatorProps) {
     const polyDrag = d3.drag()
         .on('start', () => setDragging(true))
         .on('drag', function(e) {
-            if (!props.isDrawing) {
-                controls.handlePolygonDrag(this, e, t, props.polygonPoints, props.setPolygonPoints)
+            if (props.isDrawing) return;
+  
+            
+            if (isWithinImage(e.x, e.y, scale)) {
+                controls.handlePolygonDrag(this, e, t, props.polygonPoints, props.setPolygonPoints);
             }
         })
         .on('end', () => setDragging(false))
@@ -214,18 +230,17 @@ export function D3Annotator(props: annotatorProps) {
     /* ********** POLYLINE DRAWING HANDLERS ********** */
 
 
-
-    function handlePolylineMouseMove(event: MouseEvent) {
+    function handlePolylineMouseMove(e: MouseEvent) {
 
         /* this is acting sorta buggy */
         
-        if (props.isDrawing && points.length >= 1) {
-            const [offsetX, offsetY] = d3.pointer(event, props.svgElement.current);
+        if (props.isDrawing && points.length >= 1 && isWithinImage(e.x, e.y, scale)) {
+            const [offsetX, offsetY] = d3.pointer(e, props.svgElement.current);
             const [x,y] = controls.getProportionalCoords(offsetX, offsetY, props.svgElement.current);
             const newVertex: Point = { x: x, y: y };
             setPoints((prevPoints) => {
                 const updatedPoints = [...prevPoints];
-                if (closingPoly(newVertex)) {
+                if (controls.closingPoly(newVertex, points, t, props.scaleFactor)) {
                   updatedPoints[polylineLen] = prevPoints[0];
                 } else {
                   updatedPoints[polylineLen] = newVertex;
@@ -263,23 +278,6 @@ export function D3Annotator(props: annotatorProps) {
 
     /* ********** UTILITY FUNCTIONS ********** */
 
-    function closingPoly(v: Point) {
-        
-        /* Checks to see if new vertex is attempting to close the polygon. 
-        There needs to be at least 4 existing points for a new vertex to make a polygon. 
-        And the new vertex must also be sufficiently close to the initial point in the polyline.
-
-        (4 because the smallest shape a triangle has 3 points, plus another point tracked by the
-            pointer that popped when the polygon is closed.) */
-
-        if (points.length >= 4) {
-            if (Math.abs(points[0].x - v.x) <= 7/t.k && 
-                Math.abs(points[0].y - v.y) <= 7/t.k) {
-                return true
-            }
-        }
-        return false
-    }
 
     function convertPoints(points: Point[]) {
 
@@ -294,8 +292,25 @@ export function D3Annotator(props: annotatorProps) {
         function distance(p1: Point, p2: Point) {
             return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2))
         }
-        const closest = points.reduce((a, b) => distance(a, point) < distance(b, point) ? a : b);
-        return closest
+        let closest = [0, Infinity]
+        points.forEach((pt, i) => {
+            if (distance(pt, point) < closest[1]) {
+                closest = [i, distance(pt, point)]
+            }
+        })
+        return points[closest[0]]
+    }
+
+    function isWithinImage(x: number, y: number, scale: number) {
+        if ((x/scale < props.svgElement.current?.clientWidth)
+            && (x/scale > 0)
+            && (y/scale < (props.svgElement.current?.clientHeight))
+            && (y/scale > 0)) {
+                return true
+            } 
+        else {
+            return false
+        }
     }
 
 
