@@ -21,18 +21,19 @@ export default function Viewer(): JSX.Element {
   const [currentZoom, setCurrentZoom] = useState(1)
   const [imgDimensions, setImgDimensions] = useState<Dims>()
   const [divDimensions, setDivDimensions] = useState<Dims>()
+  const [currImage, setCurrImage] = useState('/images/maddoxdev.jpg')
   
   useEffect(() => {
     const img = new Image();
     img.onload = function(){
       setImgDimensions({width: img.naturalWidth, height: img.naturalHeight})
     };
-    img.src = "/images/maddoxdev.jpg"
+    img.src = currImage
     
     window.addEventListener("resize", handleResize);
     handleResize();
     return () => window.removeEventListener("resize", handleResize);
-  }, [])
+  }, [currImage])
   let scaleFactor = 1
   if (divDimensions && imgDimensions) {
     scaleFactor = 1/(divDimensions?.width / imgDimensions?.width)
@@ -50,6 +51,9 @@ export default function Viewer(): JSX.Element {
         <h1>go back</h1>
       </Link>
       <h1>D3 Annotator demo</h1>
+      <button onClick = {() => setCurrImage('/images/maddoxdev.jpg')}>idk what this is tbh</button>
+      <button onClick = {() => setCurrImage('/images/bigimage.jpg')}>tractor go brrrr</button>
+      <button onClick = {() => setCurrImage('/images/wires.jpg')}>wire me up</button>
       <div 
         ref = {divRef}
         style = {{position: 'relative', width: '85vw', margin: 'auto' }}>
@@ -68,7 +72,7 @@ export default function Viewer(): JSX.Element {
           viewBox= {"0 0 " + `${imgDimensions?.width} ${imgDimensions?.height}`} // s
         >
             <image 
-              href="/images/maddoxdev.jpg" 
+              href={currImage}
               ref = {imgRef}
               width = "100%"
               className = {styles.img}

@@ -18,7 +18,6 @@ interface annotatorProps {
     setPolygonPoints: Dispatch<SetStateAction<Point[][]>>
     setCurrentZoom: Dispatch<number>
     scaleFactor: number
-    img100: number
 }
 
 export function D3Annotator(props: annotatorProps) {
@@ -198,7 +197,7 @@ export function D3Annotator(props: annotatorProps) {
 
 /* ********** ZOOM AND PAN HANDLERS ********** */
 
-    const zoom = d3.zoom().scaleExtent([0.1*scale, 10*scale])
+    const zoom = d3.zoom().scaleExtent([0.05*scale, 10*scale])
     //.translateExtent([[0,0],[1500, 600]])
         .on("start", function(e) {
             t = e.transform;
