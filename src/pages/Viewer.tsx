@@ -12,6 +12,7 @@ import { Dims, LabelData, Point } from '../types/svgTypes'
 export default function Viewer(): JSX.Element {
 
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const imgRef = useRef<SVGImageElement | null>(null);
   const divRef = useRef<HTMLDivElement | null>(null)
   const [isDrawing, setIsDrawing] = useState<boolean>(false)
   const [dialogueOpen, setDialogueOpen] = useState<boolean>(false)
@@ -39,22 +40,19 @@ export default function Viewer(): JSX.Element {
   function handleResize() {
       setDivDimensions({
         width: divRef.current?.clientWidth,
-        height: divRef.current?.clientHeight,
+         height: divRef.current?.clientHeight,
       });
   }
-
-
+  
   return (
     <div>
       <Link href="/">
         <h1>go back</h1>
       </Link>
       <h1>D3 Annotator demo</h1>
-      {/* <h2>{dims[0]}, {dims[1]}</h2> */}
-      <h3>{currentZoom*100}%</h3>
       <div 
         ref = {divRef}
-        style = {{position: 'relative', width: '90vw', margin: 'auto' }}>
+        style = {{position: 'relative', width: '85vw', margin: 'auto' }}>
         <button onClick = {()=> setIsDrawing(!isDrawing)}>{isDrawing ? "Stop drawing" : "Start drawing"}</button>
 
         <svg
@@ -71,11 +69,14 @@ export default function Viewer(): JSX.Element {
         >
             <image 
               href="/images/maddoxdev.jpg" 
+              ref = {imgRef}
               width = "100%"
               className = {styles.img}
             />
         </svg>
+        <p>{Math.round(currentZoom*100)}%</p>
         <button id = "reset" >Fit to container</button>
+        <button id = "fullsize" >Zoom to 100%</button>
 
         {polygonLabels.map((label, i) => {
           return (

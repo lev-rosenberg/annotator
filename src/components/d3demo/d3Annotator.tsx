@@ -18,6 +18,7 @@ interface annotatorProps {
     setPolygonPoints: Dispatch<SetStateAction<Point[][]>>
     setCurrentZoom: Dispatch<number>
     scaleFactor: number
+    img100: number
 }
 
 export function D3Annotator(props: annotatorProps) {
@@ -143,6 +144,13 @@ export function D3Annotator(props: annotatorProps) {
             .duration(250)
             .call(zoom.transform as any, d3.zoomIdentity)
         })
+        
+        d3.select("#fullsize").on("click", (e) => {
+            console.log(e)
+            svg.transition()
+            .duration(250)
+            .call(zoom.transform as any, d3.zoomIdentity.scale(scale))
+        })
 
         return () => {
             svg.on('mousedown', null);
@@ -179,9 +187,18 @@ export function D3Annotator(props: annotatorProps) {
 
     }, [t, dragging, zooming, props.dialogueOpen])
 
+    // useEffect(() => {
+    //     d3.select("#reset").on("click", () => {
+    //         svg.transition()
+    //         .duration(250)
+    //         .call(zoom.transform as any, d3.zoomIdentity)
+    //     })
+    //     props.setCurrentZoom(t.k / scale)
+    // }, [])
+
 /* ********** ZOOM AND PAN HANDLERS ********** */
 
-    const zoom = d3.zoom().scaleExtent([0.5, 10])
+    const zoom = d3.zoom().scaleExtent([0.1*scale, 10*scale])
     //.translateExtent([[0,0],[1500, 600]])
         .on("start", function(e) {
             t = e.transform;
@@ -189,15 +206,13 @@ export function D3Annotator(props: annotatorProps) {
         })
         .on("zoom", function(e) {
             controls.handleSvgZoom(e, scale);
-            props.setCurrentZoom(e.transform.k)
+            props.setCurrentZoom(e.transform.k / scale)
             t = e.transform;
         })
         .on("end", function(e) {
             t = e.transform;
             setZooming(false)
         })
-    
-        
 
     
 
