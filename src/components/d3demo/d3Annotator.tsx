@@ -24,12 +24,11 @@ export function D3Annotator(props: annotatorProps) {
     
     // the coordinates of vertices in the currently drawn polyline
     const [points, setPoints] = useState<Point[]>([]); 
-
-    // the number of vertices in the currently drawn polyline 
-    // (this doesn't always correspond with points. something i should rewrite cause it's unnesesarily complicated)
+    // the number of vertices in the currently drawn polyline (this doesn't always correspond with points. something i should rewrite cause it's unnesesarily complicated)
     const [polylineLen, setPolylineLen] = useState(0) 
 
     const [dragging, setDragging] = useState(false)
+    const [selected, setSelected] = useState<number | null>(null)
     const [zooming, setZooming] = useState(false)
     const [isSelected, setIsSelected] = useState(null)
 
@@ -117,22 +116,20 @@ export function D3Annotator(props: annotatorProps) {
             .attr('transform', t.toString())
             
 
-        if (props.isDrawing) {
             svg.on('mousedown', function(e) {
-                if (isWithinImage(e.x, e.y, scale)) {
-                    console.log(isWithinImage(e.x, e.y, scale))
+                if (props.isDrawing && isWithinImage(e.x, e.y, scale)) {
                     controls.handleDrawPolylineOnClick(e, props.svgElement, points, setPoints, props.polygonPoints, props.setPolygonPoints, setPolylineLen, 
                         props.setDialogueOpen,
                         props.setIsDrawing, t, scale)
                 }
-                
             });
-        }
-        svg.on('mousemove', function(e) {
-            handlePolylineMouseMove(e, );
+        
+
+        svg.selectAll('image').on('mousemove', function(e) {
+            handlePolylineMouseMove(e);
             });        
         svg.selectAll('circle').call(circleDrag as any)
-        svg.selectAll('.polygon-group').call(polyDrag as any)
+        svg.selectAll('polygon').call(polyDrag as any)
         svg.call(zoom as any, d3.zoomTransform)
 
         svg.selectAll('.polygon-group').on("contextmenu", function (e) {
@@ -206,26 +203,25 @@ export function D3Annotator(props: annotatorProps) {
 
 /* ********** DRAGGING HANDLERS ********** */
 
-    const circleDrag = d3.drag()
-        .on('start', () => setDragging(true))
-        .on('drag', function(e) {
-            if (!props.isDrawing && isWithinImage(e.x + e.dx, e.y + e.dy, scale)) {
-                controls.handleVertexDrag(this, e, props.polygonPoints, props.setPolygonPoints)
-            }
-            
-        })
-        .on('end', () => setDragging(false))
     const polyDrag = d3.drag()
         .on('start', () => setDragging(true))
-        .on('drag', function(e) {
-            if (props.isDrawing) return;
-  
-            
-            if (isWithinImage(e.x, e.y, scale)) {
+        .on('drag', function(e: DragEvent) {
+
+            if (!props.isDrawing && isWithinImage(e.x, e.y, scale)) {
                 controls.handlePolygonDrag(this, e, t, props.polygonPoints, props.setPolygonPoints);
             }
         })
         .on('end', () => setDragging(false))
+
+    const circleDrag = d3.drag()
+        .on('start', () => setDragging(true))
+        .on('drag', function(e: DragEvent) {
+            if (!props.isDrawing && isWithinImage(e.x, e.y, scale)) {
+                controls.handleVertexDrag(this, e, props.polygonPoints, props.setPolygonPoints)
+            }
+        })
+        .on('end', () => setDragging(false))
+
 
     /* ********** POLYLINE DRAWING HANDLERS ********** */
 
@@ -234,13 +230,13 @@ export function D3Annotator(props: annotatorProps) {
 
         /* this is acting sorta buggy */
         
-        if (props.isDrawing && points.length >= 1 && isWithinImage(e.x, e.y, scale)) {
+        if (props.isDrawing && points.length >= 1) {
             const [offsetX, offsetY] = d3.pointer(e, props.svgElement.current);
             const [x,y] = controls.getProportionalCoords(offsetX, offsetY, props.svgElement.current);
             const newVertex: Point = { x: x, y: y };
             setPoints((prevPoints) => {
                 const updatedPoints = [...prevPoints];
-                if (controls.closingPoly(newVertex, points, t, props.scaleFactor)) {
+                if (controls.closingPoly(newVertex, points, t, scale)) {
                   updatedPoints[polylineLen] = prevPoints[0];
                 } else {
                   updatedPoints[polylineLen] = newVertex;
@@ -258,20 +254,16 @@ export function D3Annotator(props: annotatorProps) {
             const p = d3.select(polygon)
             const index = parseInt(p.attr('id'))
 
-            
-            let updatedPoints = [...props.polygonPoints]
-            // updatedPoints.splice(index, 1)
-            // props.setPolygonPoints(updatedPoints);
-            props.setPolygonPoints(prevPolygonPoints => (
-                
+            // so it's not about how i'm deleting the element from the list, it's about d3. i've tried l
+            // let updatedPoints = props.polygonPoints
+            // updatedPoints = updatedPoints.filter((pts, i) => i !== index);
+            // props.setPolygonPoints(updatedPoints)
+            props.setPolygonPoints(prevPolygonPoints => 
                 [...prevPolygonPoints].splice(index+1, 1)
-                ));
+                );
 
-            // let updatedLabels = [...props.polygonLabels]
-            // updatedLabels.splice(index, 1)
-            // props.setPolygonLabels(updatedLabels);
-
-            props.setPolygonLabels(prevPolygonLabels => [...prevPolygonLabels].splice(index+1, 1));
+            props.setPolygonLabels(prevPolygonLabels => 
+                [...prevPolygonLabels].splice(index+1, 1));
         }
     }
 
@@ -302,12 +294,14 @@ export function D3Annotator(props: annotatorProps) {
     }
 
     function isWithinImage(x: number, y: number, scale: number) {
-        if ((x/scale < props.svgElement.current?.clientWidth)
+        if (props.svgElement.current) {
+            if ((x/scale < props.svgElement.current?.clientWidth)
             && (x/scale > 0)
             && (y/scale < (props.svgElement.current?.clientHeight))
             && (y/scale > 0)) {
                 return true
-            } 
+            }
+        }
         else {
             return false
         }

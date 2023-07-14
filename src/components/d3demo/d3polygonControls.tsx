@@ -37,7 +37,7 @@ export function handleVertexDrag(
   e: MouseEvent, 
   polygonPoints: Point[][], 
   setPolygonPoints: Function) {
-
+  
   const dragCircle = d3.select(vertex)
   const polygonGroup = d3.select(vertex.parentElement)
   const circles = polygonGroup.selectAll('circle');
@@ -62,14 +62,14 @@ export function handlePolygonDrag(
   polygonPoints: Point[][], 
   setPolygonPoints: Function) {
 
-    const polygonGroup = d3.select(polygon)
+    const polygonGroup = d3.select(polygon.parentElement)
     const circles = polygonGroup.selectAll('circle');
     const index = parseInt(polygonGroup.attr('id'));
     const newPoints: Point[] = []
     circles.nodes().forEach((circle) => {
         d3.select(circle)
-            .attr('cx', ((d: any) => d.x + e.dx/t.k))
-            .attr('cy', ((d: any) => d.y + e.dy/t.k))
+            .attr('cx', ((d: any) => d.x + e.dx))
+            .attr('cy', ((d: any) => d.y + e.dy))
         const newPoint = {x: parseFloat(d3.select(circle).attr('cx')), y: parseFloat(d3.select(circle).attr('cy'))}
         newPoints.push(newPoint);
     })

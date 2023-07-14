@@ -5,7 +5,7 @@ import { D3Annotator } from '../components/d3demo/d3Annotator';
 import FormDialog from '../components/mini-demos/labelPopup';
 import styles from '../styles/svgAnnotator.module.css';
 import Chip from '@mui/material/Chip';
-import { Window, LabelData, Point } from '../types/svgTypes'
+import { Dims, LabelData, Point } from '../types/svgTypes'
 
 
 
@@ -18,30 +18,29 @@ export default function Viewer(): JSX.Element {
   const [polygonLabels, setPolygonLabels] = useState<LabelData[]>([]);
   const [polygonPoints, setPolygonPoints] = useState<Point[][]>([]);
   const [currentZoom, setCurrentZoom] = useState(1)
-  const [imgDimensions, setImgDimensions] = useState<Window>()
-  const [divDimensions, setDivDimensions] = useState<Window>()
+  const [imgDimensions, setImgDimensions] = useState<Dims>()
+  const [divDimensions, setDivDimensions] = useState<Dims>()
   
   useEffect(() => {
     const img = new Image();
     img.onload = function(){
       setImgDimensions({width: img.naturalWidth, height: img.naturalHeight})
     };
-    img.src = "/images/clear.jpeg"
+    img.src = "/images/maddoxdev.jpg"
     
     window.addEventListener("resize", handleResize);
     handleResize();
     return () => window.removeEventListener("resize", handleResize);
   }, [])
-  
-  const scaleFactor = 1/(divDimensions?.width / imgDimensions?.width)
-
+  let scaleFactor = 1
+  if (divDimensions && imgDimensions) {
+    scaleFactor = 1/(divDimensions?.width / imgDimensions?.width)
+  }
   function handleResize() {
-    // if (divRef.current) {
       setDivDimensions({
         width: divRef.current?.clientWidth,
         height: divRef.current?.clientHeight,
       });
-    // }
   }
 
 
@@ -55,7 +54,7 @@ export default function Viewer(): JSX.Element {
       <h3>{currentZoom*100}%</h3>
       <div 
         ref = {divRef}
-        style = {{position: 'relative', width: '70vw', margin: 'auto' }}>
+        style = {{position: 'relative', width: '90vw', margin: 'auto' }}>
         <button onClick = {()=> setIsDrawing(!isDrawing)}>{isDrawing ? "Stop drawing" : "Start drawing"}</button>
 
         <svg
@@ -71,7 +70,7 @@ export default function Viewer(): JSX.Element {
           viewBox= {"0 0 " + `${imgDimensions?.width} ${imgDimensions?.height}`} // s
         >
             <image 
-              href="/images/clear.jpeg" 
+              href="/images/maddoxdev.jpg" 
               width = "100%"
               className = {styles.img}
             />
@@ -94,6 +93,7 @@ export default function Viewer(): JSX.Element {
               />
           )
         })}
+
         <D3Annotator 
           svgElement={svgRef} 
           isDrawing = {isDrawing} 
@@ -107,6 +107,7 @@ export default function Viewer(): JSX.Element {
           setCurrentZoom = {setCurrentZoom}
           scaleFactor = {scaleFactor}
         />
+
         <FormDialog 
           dialogueOpen={dialogueOpen} 
           setDialogueOpen={setDialogueOpen} 

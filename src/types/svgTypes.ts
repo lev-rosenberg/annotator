@@ -9,7 +9,7 @@ export interface LabelData {
   visible: boolean | null
 }
 
-export interface Window {
-  width: number
-  height: number
+export interface Dims {
+  width: number | undefined
+  height: number | undefined
 }
