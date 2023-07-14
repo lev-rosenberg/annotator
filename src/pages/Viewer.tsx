@@ -34,15 +34,23 @@ export default function Viewer(): JSX.Element {
     handleResize();
     return () => window.removeEventListener("resize", handleResize);
   }, [currImage])
+
   let scaleFactor = 1
   if (divDimensions && imgDimensions) {
     scaleFactor = 1/(divDimensions?.width / imgDimensions?.width)
   }
+
   function handleResize() {
       setDivDimensions({
         width: divRef.current?.clientWidth,
          height: divRef.current?.clientHeight,
       });
+  }
+
+  function handleChangeImage(image: string) {
+    setCurrImage(image)
+    setPolygonPoints([])
+    setPolygonLabels([])
   }
   
   return (
@@ -51,74 +59,85 @@ export default function Viewer(): JSX.Element {
         <h1>go back</h1>
       </Link>
       <h1>D3 Annotator demo</h1>
-      <button onClick = {() => setCurrImage('/images/maddoxdev.jpg')}>idk what this is tbh</button>
-      <button onClick = {() => setCurrImage('/images/bigimage.jpg')}>tractor go brrrr</button>
-      <button onClick = {() => setCurrImage('/images/wires.jpg')}>wire me up</button>
+      
       <div 
-        ref = {divRef}
-        style = {{position: 'relative', width: '85vw', margin: 'auto' }}>
-        <button onClick = {()=> setIsDrawing(!isDrawing)}>{isDrawing ? "Stop drawing" : "Start drawing"}</button>
-
-        <svg
-          ref = {svgRef}
-          className = {styles.svg}
-          id = "parent"
-          width = "100%"
-          /*  TO DO: 
-          1) be able to zoom to 100% of the ACTUAL image size
-          2) labels at the correct vertex
-          3) move polygons from the middle
-          */
-          viewBox= {"0 0 " + `${imgDimensions?.width} ${imgDimensions?.height}`} // s
         >
-            <image 
-              href={currImage}
-              ref = {imgRef}
-              width = "100%"
-              className = {styles.img}
-            />
-        </svg>
-        <p>{Math.round(currentZoom*100)}%</p>
-        <button id = "reset" >Fit to container</button>
-        <button id = "fullsize" >Zoom to 100%</button>
-
-        {polygonLabels.map((label, i) => {
-          return (
-              <Chip 
-                label={label.label} 
-                color="primary"
-                size = "small"
-                key = {i}
-                sx={{
-                  position: 'absolute', 
-                  top: `${label.coords?.y/scaleFactor}px`, 
-                  left: `${label.coords?.x/scaleFactor}px`,
-                  zIndex: label.visible ? '1' : '-5'
-                }} 
+        <div className = {styles.headerRow}>
+          <button onClick = {()=> setIsDrawing(!isDrawing)}>{isDrawing ? "Stop drawing" : "Start drawing"}</button>
+          <div>
+            <button onClick = {() => handleChangeImage('/images/maddoxdev.jpg')}>idk what this is tbh</button>
+            <button onClick = {() => handleChangeImage('/images/bigimage.jpg')}>tractor go brrrr</button>
+            <button onClick = {() => handleChangeImage('/images/wires.jpg')}>wire me up</button> 
+          </div>
+        </div>
+        <div ref = {divRef} style = {{position: 'relative', width: '85vw', margin: 'auto' }}>
+          <svg
+            ref = {svgRef}
+            className = {styles.svg}
+            id = "parent"
+            width = "100%"
+            /*  TO DO: 
+            1) be able to zoom to 100% of the ACTUAL image size
+            2) labels at the correct vertex
+            3) move polygons from the middle
+            */
+            viewBox= {"0 0 " + `${imgDimensions?.width} ${imgDimensions?.height}`} // s
+          >
+              <image 
+                href={currImage}
+                ref = {imgRef}
+                width = "100%"
+                className = {styles.img}
               />
-          )
-        })}
+          </svg>
+          
+          
 
-        <D3Annotator 
-          svgElement={svgRef} 
-          isDrawing = {isDrawing} 
-          setIsDrawing = {setIsDrawing}
-          setDialogueOpen={setDialogueOpen} 
-          dialogueOpen = {dialogueOpen}
-          polygonLabels={polygonLabels}
-          setPolygonLabels = {setPolygonLabels}
-          polygonPoints = {polygonPoints}
-          setPolygonPoints = {setPolygonPoints}
-          setCurrentZoom = {setCurrentZoom}
-          scaleFactor = {scaleFactor}
-        />
+          {polygonLabels.map((label, i) => {
+            return (
+                <Chip 
+                  label={label.label} 
+                  color="primary"
+                  size = "small"
+                  key = {i}
+                  sx={{
+                    position: 'absolute', 
+                    top: `${label.coords?.y/scaleFactor}px`, 
+                    left: `${label.coords?.x/scaleFactor}px`,
+                    zIndex: label.visible ? '1' : '-5'
+                  }} 
+                />
+            )
+          })}
 
-        <FormDialog 
-          dialogueOpen={dialogueOpen} 
-          setDialogueOpen={setDialogueOpen} 
-          polygonLabels={polygonLabels}
-          setPolygonLabels ={setPolygonLabels}
-        />
+          <D3Annotator 
+            svgElement={svgRef} 
+            isDrawing = {isDrawing} 
+            setIsDrawing = {setIsDrawing}
+            setDialogueOpen={setDialogueOpen} 
+            dialogueOpen = {dialogueOpen}
+            polygonLabels={polygonLabels}
+            setPolygonLabels = {setPolygonLabels}
+            polygonPoints = {polygonPoints}
+            setPolygonPoints = {setPolygonPoints}
+            setCurrentZoom = {setCurrentZoom}
+            scaleFactor = {scaleFactor}
+          />
+
+          <FormDialog 
+            dialogueOpen={dialogueOpen} 
+            setDialogueOpen={setDialogueOpen} 
+            polygonLabels={polygonLabels}
+            setPolygonLabels ={setPolygonLabels}
+          />
+        </div>
+        <div className = {styles.footerRow}>
+            <div>Current Zoom: {Math.round(currentZoom*100)}%</div>
+            <div>
+              <button id = "reset" >Fit to container</button>
+              <button id = "fullsize" >Zoom to 100%</button>
+            </div>
+          </div>
         <ul className = {styles.li}>
           {polygonPoints.map((polygon, i) => (
             <li key = {i}>

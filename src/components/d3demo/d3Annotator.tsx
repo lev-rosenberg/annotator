@@ -272,10 +272,12 @@ export function D3Annotator(props: annotatorProps) {
             // let updatedPoints = props.polygonPoints
             // updatedPoints = updatedPoints.filter((pts, i) => i !== index);
             // props.setPolygonPoints(updatedPoints)
+            
+            //d3.select('.polygon-group').exit().remove()
+            
             props.setPolygonPoints(prevPolygonPoints => 
                 [...prevPolygonPoints].splice(index+1, 1)
                 );
-
             props.setPolygonLabels(prevPolygonLabels => 
                 [...prevPolygonLabels].splice(index+1, 1));
         }
