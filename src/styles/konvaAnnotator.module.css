@@ -1,0 +1,13 @@
+.container {
+  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 80vw;
+  height: 65vh;
+  position: relative;
+  border: 0.25px solid black;
+  border-radius: 5px;
+  /* image-rendering: pixelated; */
+}
+

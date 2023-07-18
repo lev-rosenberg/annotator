@@ -1,4 +1,4 @@
-import { Point, LabelData} from '../../types/svgTypes'
+import { Point, LabelData} from '../../types/annotatorTypes'
 
 export function customJson(numLabels: number, width: number, height: number) {
     const polygonPoints: Point[][] = []

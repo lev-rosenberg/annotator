@@ -2,7 +2,7 @@ import { useState, useEffect, useLayoutEffect, RefObject, Dispatch, SetStateActi
 import * as d3 from 'd3'
 import styles from '../../styles/svgAnnotator.module.css';
 import * as controls from './d3polygonControls';
-import { LabelData, Point } from '../../types/svgTypes';
+import { LabelData, Point } from '../../types/annotatorTypes';
 
 
 interface annotatorProps {

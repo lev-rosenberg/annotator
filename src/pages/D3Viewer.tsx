@@ -5,7 +5,7 @@ import { D3Annotator } from '../components/d3demo/d3Annotator';
 import FormDialog from '../components/d3demo/labelPopup';
 import styles from '../styles/svgAnnotator.module.css';
 import Chip from '@mui/material/Chip';
-import { Dims, LabelData, Point } from '../types/svgTypes'
+import { Dims, LabelData, Point } from '../types/annotatorTypes'
 
 export default function D3Viewer(): JSX.Element {
 
@@ -79,6 +79,9 @@ export default function D3Viewer(): JSX.Element {
     <div>
       <Link href="/">
         <h3>go back</h3>
+      </Link>
+      <Link href="/KonvaViewer">
+        <h3>Konva Demo</h3>
       </Link>
       <h3>D3 Annotator demo</h3>
       <div 

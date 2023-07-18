@@ -1,6 +1,6 @@
 import { RefObject, Dispatch, SetStateAction } from 'react';
 import * as d3 from 'd3'
-import { Point } from '../../types/svgTypes'
+import { Point } from '../../types/annotatorTypes'
 
 
 /* ********** ZOOM AND PAN FUNCTIONS ********** */
