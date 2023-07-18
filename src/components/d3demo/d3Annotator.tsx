@@ -3,7 +3,6 @@ import * as d3 from 'd3'
 import styles from '../../styles/svgAnnotator.module.css';
 import * as controls from './d3polygonControls';
 import { LabelData, Point } from '../../types/svgTypes';
-import { FastLayer } from 'react-konva';
 
 
 interface annotatorProps {
@@ -18,6 +17,7 @@ interface annotatorProps {
     setPolygonPoints: Dispatch<SetStateAction<Point[][]>>
     setCurrentZoom: Dispatch<number>
     scaleFactor: number
+    
 }
 
 export function D3Annotator(props: annotatorProps) {
@@ -28,9 +28,7 @@ export function D3Annotator(props: annotatorProps) {
     const [polylineLen, setPolylineLen] = useState(0) 
 
     const [dragging, setDragging] = useState(false)
-    const [selected, setSelected] = useState<number | null>(null)
     const [zooming, setZooming] = useState(false)
-    const [isSelected, setIsSelected] = useState(null)
 
     //the SVG overall layer
     const svg = d3.select(props.svgElement.current)
@@ -43,7 +41,7 @@ export function D3Annotator(props: annotatorProps) {
     useLayoutEffect(() => {
 
         //this is the polygon being drawn onClick
-        const current_polyline = svg.selectAll('.drawing-polyline')
+        svg.selectAll('.drawing-polyline')
             .data([points])
             .join(
                 enter => 
@@ -63,9 +61,8 @@ export function D3Annotator(props: annotatorProps) {
             .attr('transform', t.toString())
 
 
-
         // this is the previously drawn polygons, with circles at each vertex.
-        const past_polygons = svg.selectAll('.polygon-group')
+        svg.selectAll('.polygon-group')
             .data(props.polygonPoints as Point[][]) // associate each polygon with an element of polygonPoints[][]
             .join(
                 enter => {
@@ -80,7 +77,6 @@ export function D3Annotator(props: annotatorProps) {
                         .attr('fill', (props.isDrawing ? 'none' : 'red'))
                         .attr('fill-opacity', '0.5')
                         .attr('class', styles.draggable)
-                        
                     polygon.append('polygon')
                         .attr('class', styles.polygon)
                         .attr('stroke', 'red')
@@ -107,24 +103,22 @@ export function D3Annotator(props: annotatorProps) {
                   },
                 exit => {
                     exit
-                        .transition()
-                        .duration(500)
-                        .style('opacity', 0)
+                        // .transition()
+                        // .duration(500)
+                        // .style('opacity', 0)
                         .remove()
                 }
             )
             .attr('transform', t.toString())
             
 
-            svg.on('mousedown', function(e) {
-                if (props.isDrawing && isWithinImage(e.x, e.y, scale)) {
-                    controls.handleDrawPolylineOnClick(e, props.svgElement, points, setPoints, props.polygonPoints, props.setPolygonPoints, setPolylineLen, 
-                        props.setDialogueOpen,
-                        props.setIsDrawing, t, scale)
-                }
-            });
-        
-
+        svg.on('mousedown', function(e) {
+            if (props.isDrawing && isWithinImage(e.x, e.y, scale)) {
+                controls.handleDrawPolylineOnClick(e, props.svgElement, points, setPoints, props.polygonPoints, props.setPolygonPoints, setPolylineLen, 
+                    props.setDialogueOpen,
+                    props.setIsDrawing, t, scale)
+            }
+        });
         svg.selectAll('image').on('mousemove', function(e) {
             handlePolylineMouseMove(e);
             });        
@@ -132,24 +126,28 @@ export function D3Annotator(props: annotatorProps) {
         svg.selectAll('polygon').call(polyDrag as any)
         svg.call(zoom as any, d3.zoomTransform)
 
+        //deletion
         svg.selectAll('.polygon-group').on("contextmenu", function (e) {
             e.preventDefault();
             handlePolygonDelete(this)
         });
 
-        // reset button
-        d3.select("#reset").on("click", () => {
+        //fit to container & image selectino buttons
+        d3.selectAll(".reset").on("click", () => {
             svg.transition()
             .duration(250)
             .call(zoom.transform as any, d3.zoomIdentity)
         })
         
-        d3.select("#fullsize").on("click", (e) => {
-            console.log(e)
+        //Zoom to 100% button
+        d3.select(".fullsize").on("click", (e) => {
             svg.transition()
             .duration(250)
-            .call(zoom.transform as any, d3.zoomIdentity.scale(scale))
+            .call(zoom.scaleTo as any, scale)
         })
+
+        props.setCurrentZoom(t.k / scale)
+        
 
         return () => {
             svg.on('mousedown', null);
@@ -159,7 +157,7 @@ export function D3Annotator(props: annotatorProps) {
             svg.on('zoom', null);
             svg.select("#drawing-polygon").remove();
         };
-    }, [points, props.polygonPoints, props.isDrawing, t, props.polygonLabels]);
+    }, [t, points, props.polygonPoints, props.isDrawing, props.scaleFactor]);
    
 
     useEffect(() => {
@@ -186,15 +184,6 @@ export function D3Annotator(props: annotatorProps) {
 
     }, [t, dragging, zooming, props.dialogueOpen])
 
-    // useEffect(() => {
-    //     d3.select("#reset").on("click", () => {
-    //         svg.transition()
-    //         .duration(250)
-    //         .call(zoom.transform as any, d3.zoomIdentity)
-    //     })
-    //     props.setCurrentZoom(t.k / scale)
-    // }, [])
-
 /* ********** ZOOM AND PAN HANDLERS ********** */
 
     const zoom = d3.zoom().scaleExtent([0.05*scale, 10*scale])
@@ -205,15 +194,13 @@ export function D3Annotator(props: annotatorProps) {
         })
         .on("zoom", function(e) {
             controls.handleSvgZoom(e, scale);
-            props.setCurrentZoom(e.transform.k / scale)
             t = e.transform;
+            props.setCurrentZoom(e.transform.k / scale)
         })
         .on("end", function(e) {
             t = e.transform;
             setZooming(false)
         })
-
-    
 
 /* ********** DRAGGING HANDLERS ********** */
 
@@ -268,16 +255,15 @@ export function D3Annotator(props: annotatorProps) {
             const p = d3.select(polygon)
             const index = parseInt(p.attr('id'))
 
-            // so it's not about how i'm deleting the element from the list, it's about d3. i've tried l
-            // let updatedPoints = props.polygonPoints
-            // updatedPoints = updatedPoints.filter((pts, i) => i !== index);
-            // props.setPolygonPoints(updatedPoints)
-            
+            // so it's not about how i'm deleting the element from the list, it's about d3. i've tried a bunch of deletion alternatives (filter, splice, for loop)
+
             //d3.select('.polygon-group').exit().remove()
             
             props.setPolygonPoints(prevPolygonPoints => 
                 [...prevPolygonPoints].splice(index+1, 1)
                 );
+
+
             props.setPolygonLabels(prevPolygonLabels => 
                 [...prevPolygonLabels].splice(index+1, 1));
         }

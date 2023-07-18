@@ -1,0 +1,68 @@
+
+  {
+      "annotations": {
+          "GEAR_CIRCLE_THING": {
+              "latestHumanAnnotation": {
+                  "createdAt": 1683301353.653,
+                  "id": "645523e9e9437845fa972817",
+                  "inferenceId": "61ddf9b153217294be67243c",
+                  "labels": [
+                      {
+                          "coordinates": [
+                              {
+                                  "x": 202.33885484353505,
+                                  "y": 9.471603608670122
+                              },
+                              {
+                                  "x": 127.02354495740872,
+                                  "y": 85.77791457700607
+                              },
+                              {
+                                  "x": 243.4649780050382,
+                                  "y": 141.27341346306858
+                              },
+                              {
+                                  "x": 312.3388469140616,
+                                  "y": 82.80494142239559
+                              }
+                          ],
+                          "id": "Crack",
+                          "polygonId": "85cfecc4-20f7-44c7-8fe0-3e0ee4dfebbd",
+                          "probability": null,
+                          "type": "polygon"
+                      },
+                      {
+                          "coordinates": [
+                              {
+                                  "x": 24.833773845926547,
+                                  "y": 464.874385837549
+                              },
+                              {
+                                  "x": 237.23972295969305,
+                                  "y": 509.62504368712956
+                              },
+                              {
+                                  "x": 2230.78301798433924,
+                                  "y": 499.03886656142237
+                              },
+                              {
+                                  "x": 1140.800521129472,
+                                  "y": 441.7772721087333
+                              }
+                          ],
+                          "id": "Crack",
+                          "polygonId": "923195c4-ccde-4fd6-9496-609a102e3a7c",
+                          "probability": null,
+                          "type": "polygon"
+                      }
+                  ],
+                  "modelId": "GEAR_CIRCLE_THING",
+                  "trainingTags": [],
+                  "type": "human",
+                  "updatedAt": 1683301353.653,
+                  "user": "demo@maddox.ai"
+              },
+              "machinePrediction": null
+          }
+      }
+  }

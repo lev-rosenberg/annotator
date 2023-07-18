@@ -64,6 +64,7 @@ export function handlePolygonDrag(
 
     const polygonGroup = d3.select(polygon.parentElement)
     const circles = polygonGroup.selectAll('circle');
+    const polygonSvg = polygonGroup.selectAll('polygon');
     const index = parseInt(polygonGroup.attr('id'));
     const newPoints: Point[] = []
     circles.nodes().forEach((circle) => {
@@ -73,6 +74,7 @@ export function handlePolygonDrag(
         const newPoint = {x: parseFloat(d3.select(circle).attr('cx')), y: parseFloat(d3.select(circle).attr('cy'))}
         newPoints.push(newPoint);
     })
+    polygonSvg.attr('points', convertPoints(newPoints))
     let updatedPoints = [...polygonPoints]
     updatedPoints[index] = newPoints
     setPolygonPoints(updatedPoints)
@@ -135,4 +137,13 @@ export function closingPoly(v: Point, points: Point[], t: d3.ZoomTransform, scal
       }
   }
   return false
+}
+
+function convertPoints(points: Point[]) {
+
+  /* converts the points stored as [{x1, y1}, {x2, y2}] --> x1,y1 x2,y2 for input into polyline
+   and polygon SVG elements*/
+
+  const converted = points.map((pt) => `${pt.x},${pt.y}`).join(' ')
+  return converted
 }

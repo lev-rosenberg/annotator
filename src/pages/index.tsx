@@ -6,16 +6,19 @@ import PaperAnnotator from '../components/mini-demos/paperAnnotator'
 import SVGJSAnnotator from '../components/mini-demos/svgjsAnnotator'
 import TwoAnnotator from '../components/mini-demos/twoAnnotator'
 
-import Viewer from '../pages/Viewer'
+import Viewer from './D3Viewer'
 import Link from 'next/link'
 
 
 function Home(): JSX.Element {
   return (
     <div>
-      <Link href="./Viewer">
+      <Link href="./D3Viewer">
       <h1>D3 Annotator testing</h1>
-      </Link>a
+      </Link>
+      <Link href="./KonvaViewer">
+      <h1>Konva Annotator testing</h1>
+      </Link>
       <h2>SVG.js</h2>
       <SVGJSAnnotator />
       <h2>Konva (canvas) Based</h2>
