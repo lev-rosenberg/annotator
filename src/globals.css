@@ -2,3 +2,24 @@ body {
     font-family: sans-serif;
     padding: 20px;
 }
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  border: 0.25px solid black;
+  border-radius: 5px;
+  background-color: rgba(211, 211, 211, 0.301);
+  padding: 1%;
+  margin-bottom: 2vh;
+}
+
+.footerRow {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  border: 0.25px solid black;
+  border-radius: 5px;
+  background-color: rgba(211, 211, 211, 0.301);
+  padding: 1%;
+  margin-top: 2vh;
+}
