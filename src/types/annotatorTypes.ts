@@ -4,7 +4,7 @@ export interface Point {
 }
 
 export interface LabelData {
-  label: string
+  name: string
   coords: Point | null
   visible: boolean | null
 }
@@ -12,4 +12,8 @@ export interface LabelData {
 export interface Dims {
   width: number | undefined
   height: number | undefined
+}
+export interface PolygonData {
+  coordinates: Point[] | null
+  label: LabelData
 }

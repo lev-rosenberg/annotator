@@ -1,20 +1,13 @@
-import React, {
-  useRef,
-  useEffect,
-  useLayoutEffect,
-  useState,
-  useCallback,
-} from "react";
-import useImage from "use-image";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 
+import { customJson } from "../components/toFromJson";
 import Link from "next/link";
 import KonvaAnnotator from "../components/konvaDemo/konvaAnnotator";
 import Konva from "konva";
-import { Point, LabelData, Dims } from "../types/annotatorTypes";
+import { Point, LabelData, PolygonData } from "../types/annotatorTypes";
 import styles from "../styles/konvaAnnotator.module.css";
 import FormDialog from "../components/labelPopup";
 import Chip from "@mui/material/Chip";
-import { NodeConfig, Node } from "konva/lib/Node";
 
 export default function KonvaViewer(): JSX.Element {
   const stageRef = useRef<Konva.Stage>(null);
@@ -22,9 +15,9 @@ export default function KonvaViewer(): JSX.Element {
 
   const [currImage, setCurrImage] = useState("/images/maddoxdev.jpg");
   const [currZoom, setCurrZoom] = useState(0.2);
-  const [polygonPoints, setPolygonPoints] = useState<Point[][]>([]);
-  const [polygonLabels, setPolygonLabels] = useState<LabelData[]>([]);
   const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
+  const [polygonsData, setPolygonsData] = useState<PolygonData[]>([]);
+
   // with draft polygon idea: add new combined label-polygon ds
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [isDraggingLayer, setIsDraggingLayer] = useState<boolean>(false);
@@ -32,10 +25,29 @@ export default function KonvaViewer(): JSX.Element {
   const layer = layerRef.current;
   const stage = stageRef.current;
 
-  function handleChangeImage(image: string) {
-    setCurrImage(image);
+  function handleChangeImage(image: string, num: number) {
     const img = new Image();
+    img.onload = function () {
+      const jsonData = customJson(num, img.naturalWidth, img.naturalHeight);
+      //const jsonData = fromJson('data.json');
+      setPolygonsData(jsonData);
+      setCurrImage(image);
+      handleZoomFitContainer();
+    };
     img.src = image;
+  }
+
+  function handleZoomFitContainer() {
+    const layer = layerRef.current;
+    if (layer) {
+      setCurrZoom(0.2);
+      layer.to({
+        x: 0,
+        y: 0,
+        scaleX: 0.2,
+        scaleY: 0.2,
+      });
+    }
   }
 
   function handleZoom100() {
@@ -52,34 +64,20 @@ export default function KonvaViewer(): JSX.Element {
 
   const mapLabels = useCallback(() => {
     if (layer && stage) {
-      setPolygonLabels((prevPolygonLabels) => {
-        const labels: LabelData[] = [];
+      setPolygonsData((prevPolygonsData) => {
+        const polygons: PolygonData[] = [];
         layer.find("Group").forEach((polygon, i) => {
-          const bottomRightPoint: Point | null = findBottomRightCoordinate(
-            polygon.attrs.points
-          );
-          if (prevPolygonLabels[i]) {
-            const label = prevPolygonLabels[i];
-            label.coords = {
-              x:
-                bottomRightPoint.x * currZoom +
-                stage?.attrs.container.offsetLeft +
-                layer.attrs.x +
-                10 * currZoom,
-              y:
-                bottomRightPoint.y * currZoom +
-                stage?.attrs.container.offsetTop +
-                layer.attrs.y +
-                10 * currZoom,
-            };
-            //label.visible = isDraggingLayer ? false : true;
-            labels.push(label);
+          if (prevPolygonsData[i].label) {
+            const polygonChanged = prevPolygonsData[i];
+            polygonChanged.label.coords = getLabelCoords(polygon.attrs.points);
+            polygons.push(polygonChanged);
           }
         });
-        return labels;
+        return polygons;
       });
     }
-  }, [currZoom, isDraggingLayer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currZoom, isDraggingLayer, layer, stage]);
 
   useEffect(() => {
     mapLabels();
@@ -88,6 +86,7 @@ export default function KonvaViewer(): JSX.Element {
   function getLabelCoords(polygon: Point[]) {
     if (layer && stage) {
       const bottomRightPoint: Point | null = findBottomRightCoordinate(polygon);
+      console.log(layer?.attrs.x);
       return {
         x:
           bottomRightPoint.x * currZoom +
@@ -106,24 +105,32 @@ export default function KonvaViewer(): JSX.Element {
   }
 
   function handleLabelSelect(option: string) {
-    setPolygonLabels((prevPolygonLabels) => {
-      return [
-        ...prevPolygonLabels,
-        {
-          label: option,
-          coords: getLabelCoords(draftPolygon as Point[]),
-          visible: null,
-        },
-      ];
-    });
+    const newLabel = {
+      name: option,
+      coords: getLabelCoords(draftPolygon as Point[]),
+      visible: null,
+    };
+    setPolygonsData((prevData) => [
+      ...prevData,
+      { coordinates: draftPolygon, label: newLabel },
+    ]);
     setDraftPolygon(null);
   }
 
-  function handleLabelMove(index: number, points: Point[]) {
-    setPolygonLabels((prevPolygonLabels) => {
-      const newLabels = [...prevPolygonLabels];
-      newLabels[index].coords = getLabelCoords(points);
-      return newLabels;
+  function handlePolygonChanged(index: number, points: Point[]) {
+    setPolygonsData((prevPolygonsData) => {
+      const newData = [...prevPolygonsData];
+      newData[index].label.coords = getLabelCoords(points);
+      newData[index].coordinates = points;
+      return newData;
+    });
+  }
+
+  function handlePolygonDelete(index: number) {
+    setPolygonsData((prevPolygonsData) => {
+      const newData = [...prevPolygonsData];
+      newData.splice(index, 1);
+      return newData;
     });
   }
 
@@ -168,19 +175,19 @@ export default function KonvaViewer(): JSX.Element {
         </button>
         <div>
           <button
-            onClick={() => handleChangeImage("/images/maddoxdev.jpg")}
+            onClick={() => handleChangeImage("/images/maddoxdev.jpg", 0)}
             className="reset"
           >
             idk what this is tbh (this one is normal)
           </button>
           <button
-            onClick={() => handleChangeImage("/images/bigimage.jpg")}
+            onClick={() => handleChangeImage("/images/bigimage.jpg", 0)}
             className="reset"
           >
             tractor go brrrr (this img is huge)
           </button>
           <button
-            onClick={() => handleChangeImage("/images/paul.jpg")}
+            onClick={() => handleChangeImage("/images/paul.jpg", 2)}
             className="reset"
           >
             paul (this one has lots of polygons)
@@ -191,35 +198,33 @@ export default function KonvaViewer(): JSX.Element {
         <KonvaAnnotator
           currImage={currImage}
           currZoom={currZoom}
-          setCurrZoom={setCurrZoom}
+          changeZoom={(zoom) => setCurrZoom(zoom)}
           stageRef={stageRef}
           layerRef={layerRef}
-          polygonPoints={polygonPoints}
-          setPolygonPoints={setPolygonPoints}
           isDrawing={isDrawing}
-          setIsDrawing={setIsDrawing}
-          polygonLabels={polygonLabels}
-          setPolygonLabels={setPolygonLabels}
-          setIsDraggingLayer={setIsDraggingLayer}
-          onPolygonAdded={(p: Point[]) => {
-            setDraftPolygon(p);
-          }}
-          onPolygonChanged={handleLabelMove}
-          // onPolygonDeleted={() => {}}
+          stopDrawing={() => setIsDrawing(false)}
+          draggingImage={(bool) => setIsDraggingLayer(bool)}
+          polygonsData={polygonsData}
+          onPolygonAdded={(points) => setDraftPolygon(points)}
+          onPolygonChanged={handlePolygonChanged}
+          onPolygonDeleted={handlePolygonDelete}
         />
-        {polygonLabels.map((label, i) => {
-          if (label.coords) {
+        {polygonsData.map((polygon, i) => {
+          if (polygon.label.coords) {
             return (
               <Chip
-                label={label.label}
+                label={polygon.label.name}
                 color="primary"
                 size="small"
                 key={i}
                 sx={{
                   position: "absolute",
-                  top: `${label.coords?.y}px`,
-                  left: `${label.coords?.x}px`,
-                  display: isLabelChipVisible(label.coords.x, label.coords.y)
+                  top: `${polygon.label.coords?.y}px`,
+                  left: `${polygon.label.coords?.x}px`,
+                  display: isLabelChipVisible(
+                    polygon.label.coords.x,
+                    polygon.label.coords.y
+                  )
                     ? "flex"
                     : "none",
                 }}
@@ -240,14 +245,14 @@ export default function KonvaViewer(): JSX.Element {
       <FormDialog
         dialogueOpen={draftPolygon != null}
         onLabelSelect={handleLabelSelect}
-        polygonLabels={polygonLabels}
-        setPolygonLabels={setPolygonLabels}
       />
       <ul className={styles.li}>
-        {polygonPoints.map((polygon, i) => (
+        {polygonsData.map((polygon, i) => (
           <li key={i}>
-            <h3>polygon {i} </h3>
-            {polygon.map((coords, j) => (
+            <h3>
+              polygon {i}: {polygon.label.name}{" "}
+            </h3>
+            {polygon.coordinates?.map((coords, j) => (
               <p key={j}>
                 x: {coords.x} y: {coords.y}
               </p>

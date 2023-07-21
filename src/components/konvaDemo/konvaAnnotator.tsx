@@ -1,6 +1,11 @@
-import React, { Dispatch, SetStateAction } from "react";
+import React, { Dispatch, RefObject, SetStateAction } from "react";
 import { useState, useEffect } from "react";
-import { Dims, Point, LabelData } from "../../types/annotatorTypes";
+import {
+  Dims,
+  Point,
+  LabelData,
+  PolygonData,
+} from "../../types/annotatorTypes";
 import useImage from "use-image";
 
 import { KonvaEventObject, NodeConfig } from "konva/lib/Node";
@@ -18,18 +23,16 @@ import Konva from "konva";
 interface annotatorProps {
   currImage: string;
   currZoom: number;
-  setCurrZoom: Dispatch<SetStateAction<number>>;
-  stageRef: any;
-  layerRef: any;
-  polygonPoints: Point[][];
-  setPolygonPoints: Dispatch<SetStateAction<Point[][]>>;
+  changeZoom: (zoom: number) => void;
+  stageRef: RefObject<Konva.Stage>;
+  layerRef: RefObject<Konva.Layer>;
   isDrawing: boolean;
-  setIsDrawing: Dispatch<SetStateAction<boolean>>;
-  polygonLabels: LabelData[];
-  setPolygonLabels: Dispatch<SetStateAction<LabelData[]>>;
-  setIsDraggingLayer: Dispatch<SetStateAction<boolean>>;
+  stopDrawing: () => void;
+  draggingImage: (bool: boolean) => void;
+  polygonsData: PolygonData[];
   onPolygonAdded: (polygon: any) => void;
   onPolygonChanged: (index: number, points: Point[]) => void;
+  onPolygonDeleted: (index: number) => void;
 }
 
 interface PolygonProps {
@@ -49,7 +52,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
 
   const layer = props.layerRef.current;
   const stage = props.stageRef.current;
-  const polygonPoints = props.polygonPoints;
+  const polygonsData = props.polygonsData;
 
   useEffect(() => {
     handleResize();
@@ -72,19 +75,16 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       if (!isClosingPolygon(newPoint)) {
         setPolylinePoints((prevPoints) => [...prevPoints, newPoint]);
       } else {
-        props.setIsDrawing(false);
-
-        const polygon = layer.find("Group").at(-1);
+        props.stopDrawing();
         props.onPolygonAdded(polylinePoints);
-        props.setPolygonPoints((prevPoints) => [...prevPoints, polylinePoints]);
         setPolylinePoints([]);
       }
     }
   }
 
   function handleMouseMove() {
-    if (polylinePoints.length > 0) {
-      const pointer = layer?.getRelativePointerPosition();
+    if (polylinePoints.length > 0 && layer) {
+      const pointer = layer.getRelativePointerPosition();
       if (!isClosingPolygon(pointer)) {
         setMousePos(pointer);
       } else {
@@ -104,6 +104,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   }
 
   /* ********* DRAGGING HANDLERS ********* */
+
   function handleVertexDragMove(e: KonvaEventObject<DragEvent>) {
     const c_index: number = e.target.attrs.id;
     const new_x = e.target.attrs.x;
@@ -123,12 +124,9 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
     const p_index: number = e.target.parent?.attrs.id;
     const new_x = e.target.attrs.x;
     const new_y = e.target.attrs.y;
-    const polygon = polygonPoints[p_index];
-    polygon[c_index] = { x: new_x, y: new_y };
-    let updatedPoints = [...polygonPoints];
-    updatedPoints[p_index] = polygon;
-    props.setPolygonPoints(updatedPoints);
-    props.onPolygonChanged(p_index, polygon);
+    const polygon = polygonsData[p_index].coordinates;
+    polygon![c_index] = { x: new_x, y: new_y };
+    props.onPolygonChanged(p_index, polygon ?? []);
   }
 
   function handlePolygonDragMove(e: KonvaEventObject<DragEvent>) {
@@ -158,9 +156,6 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
     if (e.target.getClassName() == "Group") {
       const index = e.target.attrs.id;
       const newPoints = e.target.attrs.points;
-      let updatedPoints = [...polygonPoints];
-      updatedPoints[index] = newPoints;
-      props.setPolygonPoints(updatedPoints);
       props.onPolygonChanged(index, newPoints);
     }
   }
@@ -170,14 +165,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   function handlePolygonDelete(e: KonvaEventObject<PointerEvent>) {
     e.evt.preventDefault();
     const p_index = e.target.attrs.id;
-
-    const updatedPoints = [...props.polygonPoints];
-    updatedPoints.splice(p_index, 1);
-    props.setPolygonPoints(updatedPoints);
-
-    const updatedLabels = [...props.polygonLabels];
-    updatedLabels.splice(p_index, 1);
-    props.setPolygonLabels(updatedLabels);
+    props.onPolygonDeleted(p_index);
   }
 
   /* ********* ZOOM AND PAN ********* */
@@ -194,7 +182,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       const direction = e.evt.deltaY > 0 ? 1 : -1; // how to scale? Zoom in? Or zoom out?
       const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
       if (newScale <= 10.2 && newScale >= 0.01) {
-        props.setCurrZoom(newScale);
+        props.changeZoom(newScale);
         layer.scale({ x: newScale, y: newScale });
         const newPos = {
           x: pointer.x - mousePointTo.x * newScale,
@@ -268,10 +256,10 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
             strokeWidth={2 / props.currZoom}
             stroke="red"
             onMouseEnter={() => {
-              stage.container().style.cursor = "move";
+              stage!.container().style.cursor = "move";
             }}
             onMouseLeave={() => {
-              stage.container().style.cursor = props.isDrawing
+              stage!.container().style.cursor = props.isDrawing
                 ? "crosshair"
                 : "grab";
             }}
@@ -289,10 +277,10 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
               onDragMove={handleVertexDragMove}
               onDragEnd={handleVertexDragEnd}
               onMouseEnter={() => {
-                stage.container().style.cursor = "crosshair";
+                stage!.container().style.cursor = "crosshair";
               }}
               onMouseLeave={() => {
-                stage.container().style.cursor = "grab";
+                stage!.container().style.cursor = "grab";
               }}
             />
           ))}
@@ -314,31 +302,33 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
         onClick={handleDrawPolylineClick}
         onMouseMove={handleMouseMove}
         draggable={true}
+        x={0}
+        y={0}
         scaleX={0.2}
         scaleY={0.2}
         onDragStart={(e) => {
           if (e.target.getClassName() == "Layer") {
-            props.setIsDraggingLayer(true);
+            props.draggingImage(true);
           }
         }}
-        onDragEnd={(e) => props.setIsDraggingLayer(false)}
+        onDragEnd={(e) => props.draggingImage(false)}
         onMouseEnter={() => {
-          stage.container().style.cursor = props.isDrawing
+          stage!.container().style.cursor = props.isDrawing
             ? "crosshair"
             : "grab";
         }}
         onMouseDown={() => {
-          stage.container().style.cursor = props.isDrawing
+          stage!.container().style.cursor = props.isDrawing
             ? "crosshair"
             : "grabbing";
         }}
         onMouseUp={() => {
-          stage.container().style.cursor = props.isDrawing
+          stage!.container().style.cursor = props.isDrawing
             ? "crosshair"
             : "grab";
         }}
         onMouseLeave={() => {
-          stage.container().style.cursor = "default";
+          stage!.container().style.cursor = "default";
         }}
       >
         <Image image={image} alt="" />
@@ -348,8 +338,8 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
           strokeWidth={2 / props.currZoom}
           stroke="red"
         />
-        {polygonPoints.map((points, i) => (
-          <Polygon key={i} points={points} i={i} />
+        {props.polygonsData?.map((polygon, i) => (
+          <Polygon key={i} points={polygon.coordinates as Point[]} i={i} />
         ))}
       </Layer>
     </Stage>

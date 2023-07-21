@@ -3,7 +3,12 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogTitle from "@mui/material/DialogTitle";
 
-export default function FormDialog(props: any) {
+interface DialogProps {
+  dialogueOpen: boolean;
+  onLabelSelect: (option: string) => void;
+}
+
+export default function FormDialog(props: DialogProps) {
   const classOptions = ["scratch", "dent", "crack"];
 
   const handleClose = (option: string) => {
