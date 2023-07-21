@@ -1,11 +1,19 @@
-import React, { useRef, Dispatch, SetStateAction } from "react";
+import React, { Dispatch, SetStateAction } from "react";
 import { useState, useEffect } from "react";
-import { Dims, Point } from "../../types/annotatorTypes";
+import { Dims, Point, LabelData } from "../../types/annotatorTypes";
 import useImage from "use-image";
 
-import { KonvaEventObject } from "konva/lib/Node";
-import { Vector2d } from "konva/lib/types";
-import { Stage, Layer, Circle, Line, Image, Group } from "react-konva";
+import { KonvaEventObject, NodeConfig } from "konva/lib/Node";
+import {
+  Stage,
+  Layer,
+  Circle,
+  Line,
+  Image,
+  Group,
+  KonvaNodeComponent,
+} from "react-konva";
+import Konva from "konva";
 
 interface annotatorProps {
   currImage: string;
@@ -17,9 +25,11 @@ interface annotatorProps {
   setPolygonPoints: Dispatch<SetStateAction<Point[][]>>;
   isDrawing: boolean;
   setIsDrawing: Dispatch<SetStateAction<boolean>>;
-  setDialogueOpen: Dispatch<SetStateAction<boolean>>;
   polygonLabels: LabelData[];
   setPolygonLabels: Dispatch<SetStateAction<LabelData[]>>;
+  setIsDraggingLayer: Dispatch<SetStateAction<boolean>>;
+  onPolygonAdded: (polygon: any) => void;
+  onPolygonChanged: (index: number, points: Point[]) => void;
 }
 
 interface PolygonProps {
@@ -42,45 +52,37 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   const polygonPoints = props.polygonPoints;
 
   useEffect(() => {
-    const dims = document.querySelector("#container")?.getBoundingClientRect();
-    setDivDimensions({ width: dims?.width, height: dims?.height });
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  function convertPoints(points: Point[]) {
-    const converted: number[] = [];
-    points.map((obj) => converted.push(obj.x, obj.y));
-    return converted;
-  }
-
-  function isClosingPolygon(point: Point) {
-    if (polylinePoints.length >= 3) {
-      if (
-        Math.abs(polylinePoints[0].x - point.x) <= 7 / props.currZoom &&
-        Math.abs(polylinePoints[0].y - point.y) <= 7 / props.currZoom
-      ) {
-        return true;
-      }
-    }
-    return false;
+  function handleResize() {
+    const dims = document.querySelector("#container")?.getBoundingClientRect();
+    setDivDimensions({ width: dims?.width, height: dims?.height });
   }
 
   /* ********* POLYLINE DRAWING HANDLERS ********* */
 
-  function handleDrawPolylineClick(e: KonvaEventObject<MouseEvent>) {
+  function handleDrawPolylineClick() {
     if (layer && props.isDrawing) {
       const newPoint: Point = layer.getRelativePointerPosition();
       if (!isClosingPolygon(newPoint)) {
         setPolylinePoints((prevPoints) => [...prevPoints, newPoint]);
       } else {
         props.setIsDrawing(false);
-        props.setDialogueOpen(true);
+
+        const polygon = layer.find("Group").at(-1);
+        props.onPolygonAdded(polylinePoints);
         props.setPolygonPoints((prevPoints) => [...prevPoints, polylinePoints]);
         setPolylinePoints([]);
       }
     }
   }
 
-  function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
+  function handleMouseMove() {
     if (polylinePoints.length > 0) {
       const pointer = layer?.getRelativePointerPosition();
       if (!isClosingPolygon(pointer)) {
@@ -106,14 +108,19 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
     const c_index: number = e.target.attrs.id;
     const new_x = e.target.attrs.x;
     const new_y = e.target.attrs.y;
-    let linePoints = e.target.parent?.children![0].getAttr("points");
-    linePoints[c_index * 2] = new_x;
-    linePoints[c_index * 2 + 1] = new_y;
+    let linePoints: Point[] = e.target.parent?.children![0].getAttr("points");
+    if (isPointWithinImage(new_x, new_y)) {
+      linePoints[c_index * 2] = new_x;
+      linePoints[c_index * 2 + 1] = new_y;
+    } else {
+      e.target.attrs.x = linePoints[c_index * 2];
+      e.target.attrs.y = linePoints[c_index * 2 + 1];
+    }
   }
 
   function handleVertexDragEnd(e: KonvaEventObject<DragEvent>) {
     const c_index: number = e.target.attrs.id;
-    const p_index = e.target.parent?.attrs.id;
+    const p_index: number = e.target.parent?.attrs.id;
     const new_x = e.target.attrs.x;
     const new_y = e.target.attrs.y;
     const polygon = polygonPoints[p_index];
@@ -121,27 +128,46 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
     let updatedPoints = [...polygonPoints];
     updatedPoints[p_index] = polygon;
     props.setPolygonPoints(updatedPoints);
+    props.onPolygonChanged(p_index, polygon);
+  }
+
+  function handlePolygonDragMove(e: KonvaEventObject<DragEvent>) {
+    if (e.target.getClassName() == "Group") {
+      const index: number = e.target.attrs.id;
+      const dx = e.target.attrs.x;
+      const dy = e.target.attrs.y;
+      const circles: Konva.Circle[] = e.target.getChildren(function (
+        node: Konva.Node
+      ) {
+        return node.getClassName() === "Circle";
+      });
+      const circlesInImage = circles.every((circle) =>
+        isPointWithinImage(circle.attrs.x + dx, circle.attrs.y + dy)
+      );
+      if (circlesInImage) {
+        let newPoints: Point[] = [];
+        circles.forEach((circle) =>
+          newPoints.push({ x: circle.attrs.x + dx, y: circle.attrs.y + dy })
+        );
+        e.target.attrs.points = newPoints;
+      }
+    }
   }
 
   function handlePolygonDragEnd(e: KonvaEventObject<DragEvent>) {
     if (e.target.getClassName() == "Group") {
       const index = e.target.attrs.id;
-      const dx = e.target.attrs.x;
-      const dy = e.target.attrs.y;
-      const polygon = polygonPoints[index];
-      polygon.map((pt) => {
-        pt.x += dx;
-        pt.y += dy;
-      });
+      const newPoints = e.target.attrs.points;
       let updatedPoints = [...polygonPoints];
-      updatedPoints[index] = polygon;
+      updatedPoints[index] = newPoints;
       props.setPolygonPoints(updatedPoints);
+      props.onPolygonChanged(index, newPoints);
     }
   }
 
   /* ********* POLYGON RIGHT CLICK HANDLERS  ********* */
 
-  function handlePolygonDelete(e) {
+  function handlePolygonDelete(e: KonvaEventObject<PointerEvent>) {
     e.evt.preventDefault();
     const p_index = e.target.attrs.id;
 
@@ -179,6 +205,38 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
     }
   }
 
+  /* ********* UTILITY FUNCTIONS ********* */
+
+  function convertPoints(points: Point[]) {
+    const converted: number[] = [];
+    points.map((obj) => converted.push(obj.x, obj.y));
+    return converted;
+  }
+
+  function isClosingPolygon(point: Point) {
+    if (polylinePoints.length >= 3) {
+      if (
+        Math.abs(polylinePoints[0].x - point.x) <= 7 / props.currZoom &&
+        Math.abs(polylinePoints[0].y - point.y) <= 7 / props.currZoom
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function isPointWithinImage(x: number, y: number) {
+    if (layer && image) {
+      if (x < image.width && x > 0 && y < image.height && y > 0) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+
   /* ********* CUSTOM SHAPE COMPONENTS ********* */
 
   function Polyline() {
@@ -198,7 +256,9 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
           id={i.toString()}
           draggable
           onDragEnd={handlePolygonDragEnd}
+          onDragMove={handlePolygonDragMove}
           onContextMenu={handlePolygonDelete}
+          points={points}
         >
           <Line
             key={i}
@@ -240,9 +300,11 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       </>
     );
   }
+
   return (
     <Stage
       ref={props.stageRef}
+      style={{ borderRadius: "5px", overflow: "hidden" }}
       width={divDimensions?.width}
       height={divDimensions?.height}
       onWheel={zoomLayer}
@@ -254,6 +316,12 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
         draggable={true}
         scaleX={0.2}
         scaleY={0.2}
+        onDragStart={(e) => {
+          if (e.target.getClassName() == "Layer") {
+            props.setIsDraggingLayer(true);
+          }
+        }}
+        onDragEnd={(e) => props.setIsDraggingLayer(false)}
         onMouseEnter={() => {
           stage.container().style.cursor = props.isDrawing
             ? "crosshair"

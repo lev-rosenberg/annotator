@@ -7,11 +7,7 @@ export default function FormDialog(props: any) {
   const classOptions = ["scratch", "dent", "crack"];
 
   const handleClose = (option: string) => {
-    props.setDialogueOpen(false);
-    props.setPolygonLabels([
-      ...props.polygonLabels,
-      { label: option, coords: null, visible: null },
-    ]);
+    props.onLabelSelect(option);
   };
 
   return (

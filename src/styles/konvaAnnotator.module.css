@@ -10,3 +10,7 @@
   cursor: pointer;
   /* image-rendering: pixelated; */
 }
+
+.layer {
+  border-radius: 5px;
+}
