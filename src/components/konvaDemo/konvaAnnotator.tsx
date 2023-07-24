@@ -83,7 +83,6 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   function polylineToMouse() {
     const start: Point | undefined = polylinePoints.at(-1);
     if (polylinePoints.length >= 1 && mousePos && start) {
-      console.log(polylinePoints.length);
       const end: Point = mousePos;
       return convertPoints([start, end]);
     } else {

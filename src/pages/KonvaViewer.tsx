@@ -18,7 +18,6 @@ export default function KonvaViewer(): JSX.Element {
   const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
   const [polygonsData, setPolygonsData] = useState<PolygonData[]>([]);
 
-  // with draft polygon idea: add new combined label-polygon ds
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [isDraggingLayer, setIsDraggingLayer] = useState<boolean>(false);
 

@@ -22,7 +22,8 @@
 }
 
 .img {
-  image-rendering: auto}
+  image-rendering: auto;
+}
 
 .li {
   list-style-type: none;
@@ -36,5 +37,3 @@
   border-radius: 16px;
   font-size: 14px;
 }
-
-

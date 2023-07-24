@@ -1,23 +1,26 @@
 import React, { useRef, useEffect, useLayoutEffect, useState } from "react";
-import { fromJson, customJson } from "../components/d3demo/loadJson";
+import { fromJson, customJson } from "../components/toFromJson";
 import Link from "next/link";
 import { D3Annotator } from "../components/d3demo/d3Annotator";
 import FormDialog from "../components/labelPopup";
 import styles from "../styles/svgAnnotator.module.css";
 import Chip from "@mui/material/Chip";
-import { Dims, LabelData, Point } from "../types/annotatorTypes";
+import * as d3 from "d3";
+import { Dims, LabelData, Point, PolygonData } from "../types/annotatorTypes";
 
 export default function D3Viewer(): JSX.Element {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const imgRef = useRef<SVGImageElement | null>(null);
   const divRef = useRef<HTMLDivElement | null>(null);
+
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
-  const [dialogueOpen, setDialogueOpen] = useState<boolean>(false);
+  const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
+
   const [polygonLabels, setPolygonLabels] = useState<LabelData[]>([]);
-  const [polygonPoints, setPolygonPoints] = useState<Point[][]>([]);
+  const [polygonsData, setPolygonsData] = useState<PolygonData[]>([]);
   const [currentZoom, setCurrentZoom] = useState(1);
-  const [imgDimensions, setImgDimensions] = useState<Dims>();
-  const [divDimensions, setDivDimensions] = useState<Dims>();
+  const [imgDimensions, setImgDimensions] = useState<Dims | undefined>();
+  const [divDimensions, setDivDimensions] = useState<Dims | undefined>();
   const [currImage, setCurrImage] = useState("/images/maddoxdev.jpg");
 
   useEffect(() => {
@@ -30,10 +33,7 @@ export default function D3Viewer(): JSX.Element {
 
     if ((img.naturalWidth, img.naturalHeight)) {
       const jsonData = customJson(0, img.naturalWidth, img.naturalHeight);
-      //const jsonData = fromJson('data.json');
-
-      setPolygonPoints(jsonData.polygonPoints);
-      setPolygonLabels(jsonData.polygonLabels);
+      setPolygonsData(jsonData);
     }
     window.addEventListener("resize", handleResize);
 
@@ -52,19 +52,48 @@ export default function D3Viewer(): JSX.Element {
     });
   }
 
-  function handleChangeImage(image: string, num) {
+  function handleChangeImage(image: string, num: number) {
     setCurrImage(image);
     setIsDrawing(false);
     const img = new Image();
     img.onload = function () {
       setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
       const jsonData = customJson(num, img.naturalWidth, img.naturalHeight);
-      //const jsonData = fromJson('data.json');
-      setPolygonPoints(jsonData.polygonPoints);
-      setPolygonLabels(jsonData.polygonLabels);
+      setPolygonsData(jsonData);
       scaleFactor = 1 / (divDimensions?.width / imgDimensions?.width);
     };
     img.src = image;
+  }
+
+  function handleLabelSelect(option: string) {
+    const newLabel = {
+      name: option,
+      coords: null, //getLabelCoords(draftPolygon as Point[]),
+      visible: null,
+    };
+    setPolygonsData((prevData) => [
+      ...prevData,
+      { coordinates: draftPolygon, label: newLabel },
+    ]);
+    setIsDrawing(false);
+    setDraftPolygon(null);
+  }
+
+  function handlePolygonChanged(index: number, points: Point[]) {
+    setPolygonsData((prevPolygonsData) => {
+      const newData = [...prevPolygonsData];
+      //newData[index].label.coords = getLabelCoords(points);
+      newData[index].coordinates = points;
+      return newData;
+    });
+  }
+
+  function handlePolygonDeleted(index: number) {
+    setPolygonsData((prevPolygonsData) => {
+      const newData = [...prevPolygonsData];
+      newData.splice(index, 1);
+      return newData;
+    });
   }
 
   return (
@@ -148,23 +177,18 @@ export default function D3Viewer(): JSX.Element {
           <D3Annotator
             svgElement={svgRef}
             isDrawing={isDrawing}
-            setIsDrawing={setIsDrawing}
-            setDialogueOpen={setDialogueOpen}
-            dialogueOpen={dialogueOpen}
-            polygonLabels={polygonLabels}
-            setPolygonLabels={setPolygonLabels}
-            polygonPoints={polygonPoints}
-            setPolygonPoints={setPolygonPoints}
+            draftPolygon={draftPolygon}
+            polygonsData={polygonsData}
             setCurrentZoom={setCurrentZoom}
             scaleFactor={scaleFactor}
+            onPolygonAdded={(points) => setDraftPolygon(points)}
+            onPolygonChanged={handlePolygonChanged}
+            onPolygonDeleted={handlePolygonDeleted}
           />
 
           <FormDialog
-            dialogueOpen={dialogueOpen}
-            onLabelSelect={() => setDialogueOpen(false)}
-            // YOU BROKE THIS
-            polygonLabels={polygonLabels}
-            setPolygonLabels={setPolygonLabels}
+            dialogueOpen={draftPolygon != null}
+            onLabelSelect={(option) => handleLabelSelect(option)}
           />
         </div>
         <div className="footerRow">
@@ -175,10 +199,12 @@ export default function D3Viewer(): JSX.Element {
           </div>
         </div>
         <ul className={styles.li}>
-          {polygonPoints.map((polygon, i) => (
+          {polygonsData.map((polygon, i) => (
             <li key={i}>
-              <h3>polygon {i} </h3>
-              {polygon.map((coords, j) => (
+              <h3>
+                polygon {i}: {polygon.label.name}{" "}
+              </h3>
+              {polygon.coordinates?.map((coords, j) => (
                 <p key={j}>
                   x: {coords.x} y: {coords.y}
                 </p>
