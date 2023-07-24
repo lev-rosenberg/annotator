@@ -2,6 +2,9 @@ import React, { useRef, useEffect, useLayoutEffect, useState } from "react";
 import { fromJson, customJson } from "../components/toFromJson";
 import Link from "next/link";
 import { D3Annotator } from "../components/d3demo/d3Annotator";
+import { PolylineDrawer } from "../components/d3demo/d3Polyline";
+import { PolygonsDrawer } from "../components/d3demo/d3Polygons";
+
 import FormDialog from "../components/labelPopup";
 import styles from "../styles/svgAnnotator.module.css";
 import Chip from "@mui/material/Chip";
@@ -173,7 +176,20 @@ export default function D3Viewer(): JSX.Element {
               />
             );
           })}
-
+          <PolylineDrawer
+            svgElement={svgRef}
+            scaleFactor={scaleFactor}
+            isDrawing={isDrawing}
+            onPolygonAdded={(points) => setDraftPolygon(points)}
+          />
+          <PolygonsDrawer
+            svgElement={svgRef}
+            scaleFactor={scaleFactor}
+            isDrawing={isDrawing}
+            onPolygonChanged={handlePolygonChanged}
+            onPolygonDeleted={handlePolygonDeleted}
+            polygonsData={polygonsData}
+          />
           <D3Annotator
             svgElement={svgRef}
             isDrawing={isDrawing}
@@ -181,9 +197,6 @@ export default function D3Viewer(): JSX.Element {
             polygonsData={polygonsData}
             setCurrentZoom={setCurrentZoom}
             scaleFactor={scaleFactor}
-            onPolygonAdded={(points) => setDraftPolygon(points)}
-            onPolygonChanged={handlePolygonChanged}
-            onPolygonDeleted={handlePolygonDeleted}
           />
 
           <FormDialog
