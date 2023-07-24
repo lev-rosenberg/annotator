@@ -161,7 +161,8 @@ export default function D3Viewer(): JSX.Element {
 
           <FormDialog
             dialogueOpen={dialogueOpen}
-            setDialogueOpen={setDialogueOpen}
+            onLabelSelect={() => setDialogueOpen(false)}
+            // YOU BROKE THIS
             polygonLabels={polygonLabels}
             setPolygonLabels={setPolygonLabels}
           />

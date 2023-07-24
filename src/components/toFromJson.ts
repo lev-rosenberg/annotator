@@ -1,13 +1,13 @@
-import { Point, LabelData, PolygonData} from '../types/annotatorTypes'
+import { Point, LabelData, PolygonData, Annotations} from '../types/annotatorTypes'
 
 export function customJson(numLabels: number, width: number, height: number) {
     const polygonsData: PolygonData[] = []
 
     const data = generateJson(numLabels, width, height)
-    const annotations = data.annotations;
-    Object.keys(annotations).forEach((key) => {
-        const labels: any = annotations[key].latestHumanAnnotation.labels
-        labels.forEach((polygon) => {
+    const annotations: Annotations = data.annotations;
+    Object.keys(annotations).forEach((key: string) => {
+        const labels = annotations[key].latestHumanAnnotation.labels
+        labels.forEach((polygon: any) => {
             const points = polygon.coordinates
             const label =  {name: polygon.id, coords: null, visible: null}
             polygonsData.push({coordinates: points, label: label})
@@ -24,16 +24,14 @@ export function fromJson(file: string) {
         const annotations = data.annotations;
         Object.keys(annotations).forEach((key) => {
             const labels = annotations[key].latestHumanAnnotation.labels
-            labels.forEach((polygon) => {
+            labels.forEach((polygon: any) => {
                 const points = polygon.coordinates
                 const label =  {name: polygon.id, coords: null, visible: null}
                 polygonsData.push({coordinates: points, label: label})
-
             })
         });
     })
     .catch(error => {
-      // Handle any error that occurs during the fetch
       console.error('Error:', error);
     });
     return polygonsData

@@ -1,23 +1,9 @@
-import React, { Dispatch, RefObject, SetStateAction } from "react";
-import { useState, useEffect } from "react";
-import {
-  Dims,
-  Point,
-  LabelData,
-  PolygonData,
-} from "../../types/annotatorTypes";
+import React, { RefObject, useState, useEffect } from "react";
+import { Dims, Point, PolygonData } from "../../types/annotatorTypes";
 import useImage from "use-image";
 
-import { KonvaEventObject, NodeConfig } from "konva/lib/Node";
-import {
-  Stage,
-  Layer,
-  Circle,
-  Line,
-  Image,
-  Group,
-  KonvaNodeComponent,
-} from "react-konva";
+import { KonvaEventObject } from "konva/lib/Node";
+import { Stage, Layer, Circle, Line, Image, Group } from "react-konva";
 import Konva from "konva";
 
 interface annotatorProps {
@@ -30,7 +16,7 @@ interface annotatorProps {
   stopDrawing: () => void;
   draggingImage: (bool: boolean) => void;
   polygonsData: PolygonData[];
-  onPolygonAdded: (polygon: any) => void;
+  onPolygonAdded: (polygon: Point[]) => void;
   onPolygonChanged: (index: number, points: Point[]) => void;
   onPolygonDeleted: (index: number) => void;
 }
@@ -78,6 +64,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
         props.stopDrawing();
         props.onPolygonAdded(polylinePoints);
         setPolylinePoints([]);
+        setMousePos(undefined);
       }
     }
   }
@@ -94,8 +81,9 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
     }
   }
   function polylineToMouse() {
-    if (polylinePoints.length > 0 && mousePos) {
-      const [start]: Point[] = polylinePoints.slice(-1);
+    const start: Point | undefined = polylinePoints.at(-1);
+    if (polylinePoints.length >= 1 && mousePos && start) {
+      console.log(polylinePoints.length);
       const end: Point = mousePos;
       return convertPoints([start, end]);
     } else {
@@ -134,6 +122,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       const index: number = e.target.attrs.id;
       const dx = e.target.attrs.x;
       const dy = e.target.attrs.y;
+      // const target = e.target as unknown as Konva.Group;
       const circles: Konva.Circle[] = e.target.getChildren(function (
         node: Konva.Node
       ) {
@@ -299,7 +288,9 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
     >
       <Layer
         ref={props.layerRef}
-        onClick={handleDrawPolylineClick}
+        onClick={() => {
+          handleDrawPolylineClick();
+        }}
         onMouseMove={handleMouseMove}
         draggable={true}
         x={0}
@@ -317,12 +308,12 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
             ? "crosshair"
             : "grab";
         }}
-        onMouseDown={() => {
+        onMouseDown={(e) => {
           stage!.container().style.cursor = props.isDrawing
             ? "crosshair"
             : "grabbing";
         }}
-        onMouseUp={() => {
+        onMouseUp={(e: KonvaEventObject<MouseEvent>) => {
           stage!.container().style.cursor = props.isDrawing
             ? "crosshair"
             : "grab";

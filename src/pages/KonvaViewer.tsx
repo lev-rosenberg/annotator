@@ -86,7 +86,6 @@ export default function KonvaViewer(): JSX.Element {
   function getLabelCoords(polygon: Point[]) {
     if (layer && stage) {
       const bottomRightPoint: Point | null = findBottomRightCoordinate(polygon);
-      console.log(layer?.attrs.x);
       return {
         x:
           bottomRightPoint.x * currZoom +
@@ -187,7 +186,7 @@ export default function KonvaViewer(): JSX.Element {
             tractor go brrrr (this img is huge)
           </button>
           <button
-            onClick={() => handleChangeImage("/images/paul.jpg", 2)}
+            onClick={() => handleChangeImage("/images/paul.jpg", 0)}
             className="reset"
           >
             paul (this one has lots of polygons)
