@@ -63,7 +63,7 @@ export function PolylineDrawer (props: polylineProps) {
       setPolylinePoints((prevPoints) => [...prevPoints, newVertex]);
       setPolylineLen((prevPolylineLen) => prevPolylineLen + 1);
     }
-  },[closingPoly, polylinePoints, props, scale])
+  },[closingPoly, props, scale])
 
   const handlePolylineFollowMouseMove = useCallback((e: MouseEvent) => {
     /* Makes polyline ending segment follow the mouse, unless 
@@ -100,7 +100,7 @@ export function PolylineDrawer (props: polylineProps) {
             .attr("fill", "none")
             .attr("stroke-width", (2 * scale) / t.k)
             .attr("points", (d) => convertPoints(d)),
-        (update) => update.attr("points", (d) => convertPoints(d))
+        (update) => update.attr("points", (d) => convertPoints(d)),
       )
       .attr("transform", t.toString());
       svg.on("click", function (e) {
@@ -109,7 +109,7 @@ export function PolylineDrawer (props: polylineProps) {
         }
       });
     
-      svg.selectAll("image").on("mousemove", function (e) {
+      svg.select("image").on("mousemove", function (e) {
         handlePolylineFollowMouseMove(e);
       });
     return () => {

@@ -14,18 +14,19 @@ import {
 } from "./utilities";
 import * as d3 from "d3";
 import styles from "../../styles/svgAnnotator.module.css";
-import { LabelData, Point, PolygonData } from "../../types/annotatorTypes";
+import { Point, PolygonData } from "../../types/annotatorTypes";
 
 interface annotatorProps {
   svgElement: RefObject<SVGSVGElement>;
   isDrawing: Boolean;
   draftPolygon: Point[] | null;
   polygonsData: PolygonData[];
+  setIsDraggingLayer: (bool: boolean) => void;
   setCurrentZoom: Dispatch<number>;
   scaleFactor: number;
 }
 
-export function D3Annotator(props: annotatorProps) {
+export function D3ZoomPan(props: annotatorProps) {
   const svg = d3.select(props.svgElement.current); //the SVG overall layer
   let t: d3.ZoomTransform; //the state of the zoom and pan of the svg
   props.svgElement.current
@@ -38,17 +39,19 @@ export function D3Annotator(props: annotatorProps) {
   const zoom = d3
     .zoom()
     .scaleExtent([0.05 * scale, 10 * scale])
-    //.translateExtent([[0,0],[1500, 600]])
     .on("start", function (e) {
       t = e.transform;
+      props.setIsDraggingLayer(true);
     })
     .on("zoom", function (e) {
       handleSvgZoom(e, scale);
+
       t = e.transform;
       props.setCurrentZoom(e.transform.k / scale);
     })
     .on("end", function (e) {
       t = e.transform;
+      props.setIsDraggingLayer(false);
     });
 
   function handleSvgZoom(e: any, scale: number) {
@@ -66,40 +69,21 @@ export function D3Annotator(props: annotatorProps) {
 
   /* ********** UTILITY FUNCTIONS ********** */
 
-  function findClosestPoint(points: Point[], point: Point) {
-    function distance(p1: Point, p2: Point) {
-      return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-    }
-    let closest = [0, Infinity];
-    points.forEach((pt, i) => {
-      if (distance(pt, point) < closest[1]) {
-        closest = [i, distance(pt, point)];
-      }
-    });
-    return points[closest[0]];
-  }
-
   useEffect(() => {
-    props.setCurrentZoom(t.k / scale);
-    //these are the funcs
-
     svg.call(zoom as any, d3.zoomTransform);
-
-    //fit to container & image selectino buttons
     d3.selectAll(".reset").on("click", () => {
       svg
         .transition()
         .duration(250)
         .call(zoom.transform as any, d3.zoomIdentity);
     });
-
-    //Zoom to 100% button
     d3.select(".fullsize").on("click", (e) => {
       svg
         .transition()
         .duration(250)
         .call(zoom.scaleTo as any, scale);
     });
+    props.setCurrentZoom(t.k / scale);
   }, [
     t,
     props.polygonsData,
@@ -108,34 +92,8 @@ export function D3Annotator(props: annotatorProps) {
     svg,
     props,
     scale,
+    zoom,
   ]);
-
-  // useEffect(() => {
-  //   const labels: LabelData[] = [];
-  //   svg.selectAll(".polygon-group").each(function () {
-  //     const bbox = (this as SVGSVGElement).getBBox();
-  //     const bottomRight: Point = {
-  //       x: bbox.x + bbox.width,
-  //       y: bbox.y + bbox.height,
-  //     };
-
-  //     const i = parseInt(d3.select(this).attr("id"));
-  //     const polyPoints = d3.select(this).data();
-  //     const closest = findClosestPoint(polyPoints[0] as Point[], bottomRight);
-  //     const proportionalCoords = t.apply([closest.x, closest.y]);
-
-  //     if (props.polygonLabels[i]) {
-  //       const label = props.polygonLabels[i];
-  //       label.coords = {
-  //         x: proportionalCoords[0] + 10,
-  //         y: proportionalCoords[1] + 10,
-  //       };
-  //       label.visible = zooming ? false : true;
-  //       labels.push(label);
-  //     }
-  //   });
-  //   props.setPolygonLabels(labels);
-  // }, [dragging, zooming, props.draftPolygon]);
 
   return null; // D3Annotator doesn't render additional content, it just adds to the existing svg
 }

@@ -5,6 +5,7 @@ import useImage from "use-image";
 import { KonvaEventObject } from "konva/lib/Node";
 import { Stage, Layer, Circle, Line, Image, Group } from "react-konva";
 import Konva from "konva";
+import { ImageOptimizerCache } from "next/dist/server/image-optimizer";
 
 interface annotatorProps {
   currImage: string;
@@ -19,6 +20,7 @@ interface annotatorProps {
   onPolygonAdded: (polygon: Point[]) => void;
   onPolygonChanged: (index: number, points: Point[]) => void;
   onPolygonDeleted: (index: number) => void;
+  divDimensions: Dims | undefined;
 }
 
 interface PolygonProps {
@@ -30,31 +32,23 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   const [polylinePoints, setPolylinePoints] = useState<Point[]>([]);
 
   const [mousePos, setMousePos] = useState<Point>();
-
-  const scaleBy = 1.05;
-
-  const [divDimensions, setDivDimensions] = useState<Dims>();
+  const zoomBy = 1.05;
   const [image] = useImage(props.currImage);
 
   const layer = props.layerRef.current;
   const stage = props.stageRef.current;
   const polygonsData = props.polygonsData;
 
-  useEffect(() => {
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  function handleResize() {
-    const dims = document.querySelector("#container")?.getBoundingClientRect();
-    setDivDimensions({ width: dims?.width, height: dims?.height });
-  }
-
+  // useEffect(() => {
+  //   const dims = document.querySelector("#container")?.getBoundingClientRect();
+  //   if (image && dims) {
+  //     setInitialScale(dims?.width / image.width);
+  //     layer?.scaleX(dims?.width / image.width);
+  //     layer?.scaleY(dims?.width / image.width);
+  //   }
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [image, props.currImage]);
   /* ********* POLYLINE DRAWING HANDLERS ********* */
-
   function handleDrawPolylineClick() {
     if (layer && props.isDrawing) {
       const newPoint: Point = layer.getRelativePointerPosition();
@@ -148,7 +142,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
     }
   }
 
-  /* ********* POLYGON RIGHT CLICK HANDLERS  ********* */
+  /* ********* POLYGON RIGHT CLICK HANDLER  ********* */
 
   function handlePolygonDelete(e: KonvaEventObject<PointerEvent>) {
     e.evt.preventDefault();
@@ -168,7 +162,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
         y: (pointer.y - layer.y()) / oldScale,
       };
       const direction = e.evt.deltaY > 0 ? 1 : -1; // how to scale? Zoom in? Or zoom out?
-      const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+      const newScale = direction > 0 ? oldScale * zoomBy : oldScale / zoomBy;
       if (newScale <= 10.2 && newScale >= 0.01) {
         props.changeZoom(newScale);
         layer.scale({ x: newScale, y: newScale });
@@ -281,8 +275,8 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
     <Stage
       ref={props.stageRef}
       style={{ borderRadius: "5px", overflow: "hidden" }}
-      width={divDimensions?.width}
-      height={divDimensions?.height}
+      width={props.divDimensions?.width}
+      height={props.divDimensions?.height}
       onWheel={zoomLayer}
     >
       <Layer

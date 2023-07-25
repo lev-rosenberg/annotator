@@ -4,15 +4,16 @@ import { customJson } from "../components/toFromJson";
 import Link from "next/link";
 import KonvaAnnotator from "../components/konvaDemo/konvaAnnotator";
 import Konva from "konva";
-import { Point, LabelData, PolygonData } from "../types/annotatorTypes";
+import { Point, LabelData, PolygonData, Dims } from "../types/annotatorTypes";
 import styles from "../styles/konvaAnnotator.module.css";
 import FormDialog from "../components/labelPopup";
 import Chip from "@mui/material/Chip";
+import { image } from "d3-fetch";
 
 export default function KonvaViewer(): JSX.Element {
   const stageRef = useRef<Konva.Stage>(null);
   const layerRef = useRef<Konva.Layer>(null);
-
+  const [divDimensions, setDivDimensions] = useState<Dims>();
   const [currImage, setCurrImage] = useState("/images/maddoxdev.jpg");
   const [currZoom, setCurrZoom] = useState(0.2);
   const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
@@ -23,6 +24,28 @@ export default function KonvaViewer(): JSX.Element {
 
   const layer = layerRef.current;
   const stage = stageRef.current;
+
+  useEffect(() => {
+    const img = new Image();
+    img.onload = function () {
+      const jsonData = customJson(0, img.naturalWidth, img.naturalHeight);
+      //const jsonData = fromJson('data.json');
+      setPolygonsData(jsonData);
+      handleZoomFitContainer();
+    };
+    img.src = currImage;
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleResize() {
+    const dims = document.querySelector("#container")?.getBoundingClientRect();
+    setDivDimensions({ width: dims?.width, height: dims?.height });
+  }
 
   function handleChangeImage(image: string, num: number) {
     const img = new Image();
@@ -61,7 +84,7 @@ export default function KonvaViewer(): JSX.Element {
     }
   }
 
-  const mapLabels = useCallback(() => {
+  const labelsToCoords = useCallback(() => {
     if (layer && stage) {
       setPolygonsData((prevPolygonsData) => {
         const polygons: PolygonData[] = [];
@@ -79,8 +102,8 @@ export default function KonvaViewer(): JSX.Element {
   }, [currZoom, isDraggingLayer, layer, stage]);
 
   useEffect(() => {
-    mapLabels();
-  }, [mapLabels]);
+    labelsToCoords();
+  }, [labelsToCoords]);
 
   function getLabelCoords(polygon: Point[]) {
     if (layer && stage) {
@@ -185,7 +208,7 @@ export default function KonvaViewer(): JSX.Element {
             tractor go brrrr (this img is huge)
           </button>
           <button
-            onClick={() => handleChangeImage("/images/paul.jpg", 0)}
+            onClick={() => handleChangeImage("/images/paul.jpg", 2)}
             className="reset"
           >
             paul (this one has lots of polygons)
@@ -206,6 +229,7 @@ export default function KonvaViewer(): JSX.Element {
           onPolygonAdded={(points) => setDraftPolygon(points)}
           onPolygonChanged={handlePolygonChanged}
           onPolygonDeleted={handlePolygonDelete}
+          divDimensions={divDimensions}
         />
         {polygonsData.map((polygon, i) => {
           if (polygon.label.coords) {
