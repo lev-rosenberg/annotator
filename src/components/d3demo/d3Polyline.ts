@@ -63,6 +63,7 @@ export function PolylineDrawer (props: polylineProps) {
       setPolylinePoints((prevPoints) => [...prevPoints, newVertex]);
       setPolylineLen((prevPolylineLen) => prevPolylineLen + 1);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[closingPoly, props, scale])
 
   const handlePolylineFollowMouseMove = useCallback((e: MouseEvent) => {
@@ -103,16 +104,21 @@ export function PolylineDrawer (props: polylineProps) {
         (update) => update.attr("points", (d) => convertPoints(d)),
       )
       .attr("transform", t.toString());
+      
+    
+      svg.select("image").on("mousemove", function (e) {
+        handlePolylineFollowMouseMove(e);
+      });
       svg.on("click", function (e) {
         if (props.isDrawing && isWithinImage(e.x, e.y, scale, props.svgElement)) {
           handleDrawPolylineOnClick(e);
         }
       });
-    
-      svg.select("image").on("mousemove", function (e) {
-        handlePolylineFollowMouseMove(e);
-      });
     return () => {
+      svg.on("mousedown", null);
+      svg.on("click", null);
+      svg.on("mousemove", null);
+      svg.on("mouseup", null);
       svg.select("#drawing-polygon").remove();
     };
    

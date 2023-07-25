@@ -19,7 +19,8 @@ export default function D3Viewer(): JSX.Element {
   const divRef = useRef<HTMLDivElement | null>(null);
 
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
-  const [isZoomingOrPanning, setIsDraggingLayer] = useState<boolean>(false);
+  const [isZoomingOrPanning, setIsZoomingOrPanning] = useState<boolean>(false);
+
   const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
 
   const [polygonsData, setPolygonsData] = useState<PolygonData[]>([]);
@@ -33,6 +34,8 @@ export default function D3Viewer(): JSX.Element {
     ? (t = d3.zoomTransform(svgRef.current))
     : (t = d3.zoomIdentity);
 
+  /* ****** IMAGE LOADING BELOW ****** */
+
   useEffect(() => {
     const img = new Image();
     img.onload = function () {
@@ -40,19 +43,17 @@ export default function D3Viewer(): JSX.Element {
     };
     img.src = "/images/maddoxdev.jpg";
     handleResize();
-
     if ((img.naturalWidth, img.naturalHeight)) {
       const jsonData = customJson(0, img.naturalWidth, img.naturalHeight);
       setPolygonsData(jsonData);
     }
     window.addEventListener("resize", handleResize);
-
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   let scaleFactor = 1;
   if (divDimensions && imgDimensions) {
-    scaleFactor = 1 / (divDimensions?.width / imgDimensions?.width);
+    scaleFactor = 1 / (divDimensions.width! / imgDimensions.width!);
   }
 
   function handleResize() {
@@ -63,17 +64,21 @@ export default function D3Viewer(): JSX.Element {
   }
 
   function handleChangeImage(image: string, num: number) {
-    setCurrImage(image);
-    setIsDrawing(false);
     const img = new Image();
     img.onload = function () {
       setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
       const jsonData = customJson(num, img.naturalWidth, img.naturalHeight);
       setPolygonsData(jsonData);
-      scaleFactor = 1 / (divDimensions?.width / imgDimensions?.width);
+      scaleFactor = 1 / (divDimensions?.width! / imgDimensions?.width!);
     };
     img.src = image;
+    setIsDrawing(false);
+    setCurrImage(image);
+    // assignLabelCoords();
   }
+  /* ****** IMAGE LOADING ABOVE ****** */
+
+  /* ****** LABEL SELECTION AND UPDATING BELOW ****** */
 
   function handleLabelSelect(option: string) {
     const newLabel = {
@@ -88,6 +93,52 @@ export default function D3Viewer(): JSX.Element {
     setIsDrawing(false);
     setDraftPolygon(null);
   }
+
+  function findBottomRightCoordinate(coordinates: Point[]): Point {
+    let currCoord: Point = coordinates[0];
+
+    for (const coord of coordinates) {
+      if (coord.y > currCoord.y) {
+        currCoord = coord;
+      }
+    }
+    return currCoord;
+  }
+
+  function getLabelCoords(polygon: Point[]) {
+    if (svgRef.current) {
+      const bottomRightPoint: Point | null = findBottomRightCoordinate(polygon);
+      const proportional = t.apply([bottomRightPoint.x, bottomRightPoint.y]);
+      return {
+        x: proportional[0] + 25 * currentZoom,
+        y: proportional[1] + 25 * currentZoom,
+      };
+    } else {
+      return null;
+    }
+  }
+
+  const assignLabelCoords = useCallback(() => {
+    setPolygonsData((prevPolygonsData) => {
+      const polygons: PolygonData[] = [];
+      prevPolygonsData.forEach((polygon, i) => {
+        if (polygon.coordinates) {
+          polygon.label.coords = getLabelCoords(polygon.coordinates);
+          polygon.label.visible = !isZoomingOrPanning ? true : false;
+          polygons.push(polygon);
+        }
+      });
+      return polygons;
+    });
+  }, [currentZoom, t, isZoomingOrPanning, currImage]);
+
+  useEffect(() => {
+    assignLabelCoords();
+  }, [assignLabelCoords]);
+
+  /* ****** LABEL SELECTION AND UPDATING ABOVE ****** */
+
+  /* ****** POLYGON DATA UPDATING BELOW ****** */
 
   function handlePolygonChanged(index: number, points: Point[]) {
     setPolygonsData((prevPolygonsData) => {
@@ -106,52 +157,7 @@ export default function D3Viewer(): JSX.Element {
     });
   }
 
-  /* LABELS */
-
-  function findBottomRightCoordinate(coordinates: Point[]): Point {
-    let currCoord: Point = coordinates[0];
-
-    for (const coord of coordinates) {
-      if (coord.y > currCoord.y) {
-        currCoord = coord;
-      }
-    }
-    return currCoord;
-  }
-
-  const getLabelCoords = useCallback(
-    (polygon: Point[]) => {
-      console.log("hi");
-
-      if (svgRef.current) {
-        const bottomRightPoint: Point | null =
-          findBottomRightCoordinate(polygon);
-        const proportional = t.apply([bottomRightPoint.x, bottomRightPoint.y]);
-        return {
-          x: proportional[0] + 25,
-          y: proportional[1] + 25,
-        };
-      } else {
-        return null;
-      }
-    },
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentZoom, t, isZoomingOrPanning, currImage]
-  );
-
-  useEffect(() => {
-    setPolygonsData((prevPolygonsData) => {
-      const polygons: PolygonData[] = [];
-      prevPolygonsData.forEach((polygon, i) => {
-        if (polygon.coordinates) {
-          polygon.label.coords = getLabelCoords(polygon.coordinates);
-          polygons.push(polygon);
-        }
-      });
-      return polygons;
-    });
-  }, [getLabelCoords]);
+  /* ****** POLYGON DATA UPDATING ABOVE ****** */
 
   return (
     <div>
@@ -181,10 +187,10 @@ export default function D3Viewer(): JSX.Element {
               tractor go brrrr (this img is huge)
             </button>
             <button
-              onClick={() => handleChangeImage("/images/bottles.jpg", 50)}
+              onClick={() => handleChangeImage("/images/bottles.jpg", 25)}
               className="reset"
             >
-              shampoo (this one has lots o' polygons)
+              shampoo (this one has lots of polygons)
             </button>
           </div>
         </div>
@@ -223,8 +229,8 @@ export default function D3Viewer(): JSX.Element {
                 key={i}
                 sx={{
                   position: "absolute",
-                  top: `${polygon.label.coords?.y / scaleFactor}px`,
-                  left: `${polygon.label.coords?.x / scaleFactor}px`,
+                  top: `${polygon.label.coords?.y! / scaleFactor}px`,
+                  left: `${polygon.label.coords?.x! / scaleFactor}px`,
                   display: polygon.label.visible ? "flex" : "none",
                 }}
               />
@@ -250,7 +256,7 @@ export default function D3Viewer(): JSX.Element {
             draftPolygon={draftPolygon}
             polygonsData={polygonsData}
             setCurrentZoom={setCurrentZoom}
-            setIsDraggingLayer={(bool) => setIsDraggingLayer(bool)}
+            setIsDraggingLayer={(bool) => setIsZoomingOrPanning(bool)}
             scaleFactor={scaleFactor}
           />
           <D3Labels

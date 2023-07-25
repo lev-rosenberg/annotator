@@ -71,6 +71,7 @@ export function D3ZoomPan(props: annotatorProps) {
 
   useEffect(() => {
     svg.call(zoom as any, d3.zoomTransform);
+
     d3.selectAll(".reset").on("click", () => {
       svg
         .transition()

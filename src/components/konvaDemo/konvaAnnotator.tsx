@@ -32,7 +32,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   const [polylinePoints, setPolylinePoints] = useState<Point[]>([]);
 
   const [mousePos, setMousePos] = useState<Point>();
-  const zoomBy = 1.05;
+  const zoomBy = 1.04;
   const [image] = useImage(props.currImage);
 
   const layer = props.layerRef.current;
@@ -112,13 +112,10 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
 
   function handlePolygonDragMove(e: KonvaEventObject<DragEvent>) {
     if (e.target.getClassName() == "Group") {
-      const index: number = e.target.attrs.id;
       const dx = e.target.attrs.x;
       const dy = e.target.attrs.y;
-      // const target = e.target as unknown as Konva.Group;
-      const circles: Konva.Circle[] = e.target.getChildren(function (
-        node: Konva.Node
-      ) {
+      const target = e.target as unknown as Konva.Group;
+      const circles = target.getChildren(function (node: Konva.Node) {
         return node.getClassName() === "Circle";
       });
       const circlesInImage = circles.every((circle) =>

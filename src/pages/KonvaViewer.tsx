@@ -57,6 +57,7 @@ export default function KonvaViewer(): JSX.Element {
       handleZoomFitContainer();
     };
     img.src = image;
+    setIsDrawing(false);
   }
 
   function handleZoomFitContainer() {
@@ -99,7 +100,7 @@ export default function KonvaViewer(): JSX.Element {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currZoom, isDraggingLayer, layer, stage]);
+  }, [currZoom, currImage, isDraggingLayer, layer, stage]);
 
   useEffect(() => {
     labelsToCoords();

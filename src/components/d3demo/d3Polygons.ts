@@ -1,4 +1,4 @@
-import React, { RefObject, useEffect, useState, Dispatch} from 'react'
+import React, { RefObject, useEffect, useState, Dispatch, useCallback} from 'react'
 import * as d3 from 'd3'
 import { Point, PolygonData } from "../../types/annotatorTypes";
 import {
@@ -81,14 +81,14 @@ export function PolygonsDrawer (props: polygonsProps) {
 
 
   /* ********** POLYGON DELETION ********** */
-  const handlePolygonDelete = 
+  const handlePolygonDelete = useCallback(
     (polygon: d3.BaseType) => {
       if (d3.select(polygon).attr("class") == "polygon-group") {
         const p = d3.select(polygon);
         const index = parseInt(p.attr("id"));
         props.onPolygonDeleted(index);
       }
-    };
+    }, [props]);
   useEffect(() => {
     // this is the previously drawn polygons, with circles at each vertex.
     svg
@@ -156,22 +156,10 @@ export function PolygonsDrawer (props: polygonsProps) {
     });
 
     return () => {
-      svg.on("mousedown", null);
-      svg.on("click", null);
-      svg.on("mousemove", null);
-      svg.on("mouseup", null);
+      
       svg.on("zoom", null);
     };
-  }, [
-    t,
-    props.polygonsData,
-    props.isDrawing,
-    props.scaleFactor,
-    svg,
-    props,
-    scale,
-    handlePolygonDelete,
-  ]);
+  }, [t, props.polygonsData, props.isDrawing, props.scaleFactor, svg, props, scale, handlePolygonDelete, circleDrag, polyDrag]);
 
 
   return null
