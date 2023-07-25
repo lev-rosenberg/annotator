@@ -14,6 +14,8 @@ export default function KonvaViewer(): JSX.Element {
   const stageRef = useRef<Konva.Stage>(null);
   const layerRef = useRef<Konva.Layer>(null);
   const [divDimensions, setDivDimensions] = useState<Dims>();
+  const [imgDimensions, setImgDimensions] = useState<Dims>();
+
   const [currImage, setCurrImage] = useState("/images/maddoxdev.jpg");
   const [currZoom, setCurrZoom] = useState(0.2);
   const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
@@ -25,13 +27,16 @@ export default function KonvaViewer(): JSX.Element {
   const layer = layerRef.current;
   const stage = stageRef.current;
 
+  /* ****** IMAGE LOADING BELOW ****** */
+
   useEffect(() => {
     const img = new Image();
     img.onload = function () {
       const jsonData = customJson(0, img.naturalWidth, img.naturalHeight);
       //const jsonData = fromJson('data.json');
+      handleZoomFitContainer(img.width, img.height);
+      setImgDimensions({ width: img.width, height: img.height });
       setPolygonsData(jsonData);
-      handleZoomFitContainer();
     };
     img.src = currImage;
 
@@ -52,38 +57,59 @@ export default function KonvaViewer(): JSX.Element {
     img.onload = function () {
       const jsonData = customJson(num, img.naturalWidth, img.naturalHeight);
       //const jsonData = fromJson('data.json');
+      handleZoomFitContainer(img.width, img.height);
+      labelsToCoords();
+      setImgDimensions({ width: img.width, height: img.height });
       setPolygonsData(jsonData);
       setCurrImage(image);
-      handleZoomFitContainer();
     };
     img.src = image;
     setIsDrawing(false);
+    //
   }
 
-  function handleZoomFitContainer() {
+  /* ****** IMAGE LOADING ABOVE ****** */
+
+  /* ****** ZOOM BUTTONS BELOW ****** */
+
+  function handleZoomFitContainer(imgWidth: number, imgHeight: number) {
     const layer = layerRef.current;
-    if (layer) {
-      setCurrZoom(0.2);
+    const dims = document.querySelector("#container")?.getBoundingClientRect();
+    if (layer && dims) {
+      const scale =
+        dims.width < imgWidth ? dims.width / imgWidth : dims.height / imgHeight;
+      setCurrZoom(scale);
+      const offsetX =
+        dims.height < imgHeight ? (dims.width - imgWidth * scale) / 2 : 0;
+      const offsetY =
+        dims.width < imgWidth ? (dims.height - imgHeight * scale) / 2 : 0;
       layer.to({
-        x: 0,
-        y: 0,
-        scaleX: 0.2,
-        scaleY: 0.2,
+        x: offsetX,
+        y: offsetY,
+        scaleX: scale,
+        scaleY: scale,
+        duration: 0.1,
       });
+      labelsToCoords();
     }
   }
 
   function handleZoom100() {
     const layer = layerRef.current;
-    if (layer) {
+    const dims = document.querySelector("#container")?.getBoundingClientRect();
+    if (layer && dims) {
       setCurrZoom(1);
       layer.to({
         scaleX: 1,
         scaleY: 1,
-        duration: 0.4,
+        duration: 0.1,
       });
     }
   }
+
+  /* ****** ZOOM BUTTONS ABOVE ****** */
+
+  /* ****** LABEL SELECTION AND UPDATING BELOW ****** */
 
   const labelsToCoords = useCallback(() => {
     if (layer && stage) {
@@ -139,23 +165,6 @@ export default function KonvaViewer(): JSX.Element {
     setDraftPolygon(null);
   }
 
-  function handlePolygonChanged(index: number, points: Point[]) {
-    setPolygonsData((prevPolygonsData) => {
-      const newData = [...prevPolygonsData];
-      newData[index].label.coords = getLabelCoords(points);
-      newData[index].coordinates = points;
-      return newData;
-    });
-  }
-
-  function handlePolygonDelete(index: number) {
-    setPolygonsData((prevPolygonsData) => {
-      const newData = [...prevPolygonsData];
-      newData.splice(index, 1);
-      return newData;
-    });
-  }
-
   function findBottomRightCoordinate(coordinates: Point[]): Point {
     let currCoord: Point = coordinates[0];
 
@@ -181,6 +190,28 @@ export default function KonvaViewer(): JSX.Element {
       return false;
     }
   }
+
+  /* ****** LABEL SELECTION AND UPDATING ABOVE ****** */
+
+  /* ****** POLYGON DATA UPDATING BELOW ****** */
+
+  function handlePolygonChanged(index: number, points: Point[]) {
+    setPolygonsData((prevPolygonsData) => {
+      const newData = [...prevPolygonsData];
+      newData[index].label.coords = getLabelCoords(points);
+      newData[index].coordinates = points;
+      return newData;
+    });
+  }
+
+  function handlePolygonDelete(index: number) {
+    setPolygonsData((prevPolygonsData) => {
+      const newData = [...prevPolygonsData];
+      newData.splice(index, 1);
+      return newData;
+    });
+  }
+  /* ****** POLYGON DATA UPDATING ABOVE ****** */
 
   return (
     <div>
@@ -259,9 +290,21 @@ export default function KonvaViewer(): JSX.Element {
       <div className="footerRow">
         <div>Current Zoom: {Math.round(currZoom * 100)}%</div>
         <div>
-          {/* <button className="reset">Fit to container</button> */}
           <button className="fullsize" onClick={handleZoom100}>
             Zoom to 100%
+          </button>
+          <button
+            className="fit-container"
+            onClick={() =>
+              imgDimensions
+                ? handleZoomFitContainer(
+                    imgDimensions?.width!,
+                    imgDimensions?.height!
+                  )
+                : console.log("nope")
+            }
+          >
+            Fit to container
           </button>
         </div>
       </div>

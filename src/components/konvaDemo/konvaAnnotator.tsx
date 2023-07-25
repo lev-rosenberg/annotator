@@ -48,7 +48,9 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   //   }
   //   // eslint-disable-next-line react-hooks/exhaustive-deps
   // }, [image, props.currImage]);
-  /* ********* POLYLINE DRAWING HANDLERS ********* */
+
+  /* ********* POLYLINE DRAWING HANDLERS BELOW ********* */
+
   function handleDrawPolylineClick() {
     if (layer && props.isDrawing) {
       const newPoint: Point = layer.getRelativePointerPosition();
@@ -83,8 +85,9 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       return [];
     }
   }
+  /* ********* POLYLINE DRAWING HANDLERS ABOVE ********* */
 
-  /* ********* DRAGGING HANDLERS ********* */
+  /* ********* DRAGGING HANDLERS BELOW ********* */
 
   function handleVertexDragMove(e: KonvaEventObject<DragEvent>) {
     const c_index: number = e.target.attrs.id;
@@ -138,16 +141,18 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       props.onPolygonChanged(index, newPoints);
     }
   }
+  /* ********* DRAGGING HANDLERS ABOVE ********* */
 
-  /* ********* POLYGON RIGHT CLICK HANDLER  ********* */
+  /* ********* POLYGON RIGHT CLICK ABOVE  ********* */
 
   function handlePolygonDelete(e: KonvaEventObject<PointerEvent>) {
     e.evt.preventDefault();
     const p_index = e.target.attrs.id;
     props.onPolygonDeleted(p_index);
   }
+  /* ********* POLYGON RIGHT CLICK ABOVE ********* */
 
-  /* ********* ZOOM AND PAN ********* */
+  /* ********* ZOOM AND PAN BELOW ********* */
 
   function zoomLayer(e: KonvaEventObject<WheelEvent>) {
     e.evt.preventDefault();
@@ -171,6 +176,8 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       }
     }
   }
+
+  /* ********* ZOOM AND PAN ABOVE ********* */
 
   /* ********* UTILITY FUNCTIONS ********* */
 
@@ -274,7 +281,9 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       style={{ borderRadius: "5px", overflow: "hidden" }}
       width={props.divDimensions?.width}
       height={props.divDimensions?.height}
-      onWheel={zoomLayer}
+      onWheel={(e) => {
+        zoomLayer(e);
+      }}
     >
       <Layer
         ref={props.layerRef}
