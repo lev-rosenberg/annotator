@@ -4,7 +4,6 @@ import Link from "next/link";
 import { D3ZoomPan } from "../components/d3demo/d3ZoomPan";
 import { PolylineDrawer } from "../components/d3demo/d3Polyline";
 import { PolygonsDrawer } from "../components/d3demo/d3Polygons";
-import { D3Labels } from "../components/d3demo/d3Labels";
 import { getProportionalCoords } from "../components/d3demo/utilities";
 
 import FormDialog from "../components/labelPopup";
@@ -258,11 +257,6 @@ export default function D3Viewer(): JSX.Element {
             setCurrentZoom={setCurrentZoom}
             setIsDraggingLayer={(bool) => setIsZoomingOrPanning(bool)}
             scaleFactor={scaleFactor}
-          />
-          <D3Labels
-            svgElement={svgRef}
-            polygonsData={polygonsData}
-            currentZoom={currentZoom}
           />
           <FormDialog
             dialogueOpen={draftPolygon != null}

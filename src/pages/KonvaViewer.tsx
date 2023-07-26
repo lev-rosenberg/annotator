@@ -20,6 +20,7 @@ export default function KonvaViewer(): JSX.Element {
   const [currZoom, setCurrZoom] = useState(0.2);
   const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
   const [polygonsData, setPolygonsData] = useState<PolygonData[]>([]);
+  const [circlesVisible, setCirclesVisible] = useState<boolean[]>([]);
 
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [isDraggingLayer, setIsDraggingLayer] = useState<boolean>(false);
@@ -37,6 +38,7 @@ export default function KonvaViewer(): JSX.Element {
       handleZoomFitContainer(img.width, img.height);
       setImgDimensions({ width: img.width, height: img.height });
       setPolygonsData(jsonData);
+      handleCirclesNotVisible();
     };
     img.src = currImage;
 
@@ -61,6 +63,7 @@ export default function KonvaViewer(): JSX.Element {
       labelsToCoords();
       setImgDimensions({ width: img.width, height: img.height });
       setPolygonsData(jsonData);
+      handleCirclesNotVisible();
       setCurrImage(image);
     };
     img.src = image;
@@ -96,10 +99,21 @@ export default function KonvaViewer(): JSX.Element {
 
   function handleZoom100() {
     const layer = layerRef.current;
+    const stage = stageRef.current;
     const dims = document.querySelector("#container")?.getBoundingClientRect();
-    if (layer && dims) {
+    if (layer && stage && dims) {
+      const center = {
+        x: stage.width() / 2,
+        y: stage.height() / 2,
+      };
+      var relatedTo = {
+        x: (center.x - layer.x()) / currZoom,
+        y: (center.y - layer.y()) / currZoom,
+      };
       setCurrZoom(1);
       layer.to({
+        x: center.x - relatedTo.x,
+        y: center.y - relatedTo.y,
         scaleX: 1,
         scaleY: 1,
         duration: 0.1,
@@ -126,7 +140,7 @@ export default function KonvaViewer(): JSX.Element {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currZoom, currImage, isDraggingLayer, layer, stage]);
+  }, [currZoom, currImage, isDraggingLayer]);
 
   useEffect(() => {
     labelsToCoords();
@@ -163,6 +177,9 @@ export default function KonvaViewer(): JSX.Element {
       { coordinates: draftPolygon, label: newLabel },
     ]);
     setDraftPolygon(null);
+    setCirclesVisible((prevPolygonsVisible) => {
+      return [...prevPolygonsVisible, false];
+    });
   }
 
   function findBottomRightCoordinate(coordinates: Point[]): Point {
@@ -195,6 +212,22 @@ export default function KonvaViewer(): JSX.Element {
 
   /* ****** POLYGON DATA UPDATING BELOW ****** */
 
+  function handleCirclesNotVisible() {
+    console.log("hre");
+    setCirclesVisible((prevCirclesVisible) => {
+      const newData = Array(prevCirclesVisible.length).fill(false);
+      return newData;
+    });
+  }
+
+  function handlePolygonClicked(index: number) {
+    setCirclesVisible((prevCirclesVisible) => {
+      const newData = Array(prevCirclesVisible.length).fill(false);
+      newData[index] = true;
+      return newData;
+    });
+  }
+
   function handlePolygonChanged(index: number, points: Point[]) {
     setPolygonsData((prevPolygonsData) => {
       const newData = [...prevPolygonsData];
@@ -207,6 +240,11 @@ export default function KonvaViewer(): JSX.Element {
   function handlePolygonDelete(index: number) {
     setPolygonsData((prevPolygonsData) => {
       const newData = [...prevPolygonsData];
+      newData.splice(index, 1);
+      return newData;
+    });
+    setCirclesVisible((prevCirclesVisible) => {
+      const newData = [...prevCirclesVisible];
       newData.splice(index, 1);
       return newData;
     });
@@ -223,7 +261,12 @@ export default function KonvaViewer(): JSX.Element {
       </Link>
       <h3>Konva Demo</h3>
       <div className="headerRow">
-        <button onClick={() => setIsDrawing(!isDrawing)}>
+        <button
+          onClick={() => {
+            setIsDrawing(!isDrawing);
+            handleCirclesNotVisible();
+          }}
+        >
           {isDrawing ? "Stop drawing" : "Start drawing"}
         </button>
         <div>
@@ -240,7 +283,7 @@ export default function KonvaViewer(): JSX.Element {
             tractor go brrrr (this img is huge)
           </button>
           <button
-            onClick={() => handleChangeImage("/images/paul.jpg", 2)}
+            onClick={() => handleChangeImage("/images/paul.jpg", 15)}
             className="reset"
           >
             paul (this one has lots of polygons)
@@ -258,34 +301,38 @@ export default function KonvaViewer(): JSX.Element {
           stopDrawing={() => setIsDrawing(false)}
           draggingImage={(bool) => setIsDraggingLayer(bool)}
           polygonsData={polygonsData}
+          onPolygonClicked={(index) => handlePolygonClicked(index)}
           onPolygonAdded={(points) => setDraftPolygon(points)}
           onPolygonChanged={handlePolygonChanged}
           onPolygonDeleted={handlePolygonDelete}
           divDimensions={divDimensions}
+          circlesVisible={circlesVisible}
         />
-        {polygonsData.map((polygon, i) => {
-          if (polygon.label.coords) {
-            return (
-              <Chip
-                label={polygon.label.name}
-                color="primary"
-                size="small"
-                key={i}
-                sx={{
-                  position: "absolute",
-                  top: `${polygon.label.coords?.y}px`,
-                  left: `${polygon.label.coords?.x}px`,
-                  display: isLabelChipVisible(
-                    polygon.label.coords.x,
-                    polygon.label.coords.y
-                  )
-                    ? "flex"
-                    : "none",
-                }}
-              />
-            );
-          }
-        })}
+        <div className="chips">
+          {polygonsData.map((polygon, i) => {
+            if (polygon.label.coords) {
+              return (
+                <Chip
+                  label={polygon.label.name}
+                  color="primary"
+                  size="small"
+                  key={i}
+                  sx={{
+                    position: "absolute",
+                    top: `${polygon.label.coords?.y}px`,
+                    left: `${polygon.label.coords?.x}px`,
+                    display: isLabelChipVisible(
+                      polygon.label.coords.x,
+                      polygon.label.coords.y
+                    )
+                      ? "flex"
+                      : "none",
+                  }}
+                />
+              );
+            }
+          })}
+        </div>
       </div>
       <div className="footerRow">
         <div>Current Zoom: {Math.round(currZoom * 100)}%</div>

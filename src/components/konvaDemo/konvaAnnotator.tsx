@@ -17,10 +17,12 @@ interface annotatorProps {
   stopDrawing: () => void;
   draggingImage: (bool: boolean) => void;
   polygonsData: PolygonData[];
+  onPolygonClicked: (index: number) => void;
   onPolygonAdded: (polygon: Point[]) => void;
   onPolygonChanged: (index: number, points: Point[]) => void;
   onPolygonDeleted: (index: number) => void;
   divDimensions: Dims | undefined;
+  circlesVisible: boolean[];
 }
 
 interface PolygonProps {
@@ -30,7 +32,6 @@ interface PolygonProps {
 
 export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   const [polylinePoints, setPolylinePoints] = useState<Point[]>([]);
-
   const [mousePos, setMousePos] = useState<Point>();
   const zoomBy = 1.04;
   const [image] = useImage(props.currImage);
@@ -38,16 +39,6 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   const layer = props.layerRef.current;
   const stage = props.stageRef.current;
   const polygonsData = props.polygonsData;
-
-  // useEffect(() => {
-  //   const dims = document.querySelector("#container")?.getBoundingClientRect();
-  //   if (image && dims) {
-  //     setInitialScale(dims?.width / image.width);
-  //     layer?.scaleX(dims?.width / image.width);
-  //     layer?.scaleY(dims?.width / image.width);
-  //   }
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [image, props.currImage]);
 
   /* ********* POLYLINE DRAWING HANDLERS BELOW ********* */
 
@@ -60,6 +51,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
         props.stopDrawing();
         props.onPolygonAdded(polylinePoints);
         setPolylinePoints([]);
+
         setMousePos(undefined);
       }
     }
@@ -179,7 +171,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
 
   /* ********* ZOOM AND PAN ABOVE ********* */
 
-  /* ********* UTILITY FUNCTIONS ********* */
+  /* ********* UTILITY FUNCTIONS BELOW ********* */
 
   function convertPoints(points: Point[]) {
     const converted: number[] = [];
@@ -210,6 +202,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       return false;
     }
   }
+  /* ********* UTILITY FUNCTIONS ABOVE ********* */
 
   /* ********* CUSTOM SHAPE COMPONENTS ********* */
 
@@ -228,7 +221,10 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       <>
         <Group
           id={i.toString()}
-          draggable
+          draggable={props.circlesVisible[i] ? true : false}
+          onClick={(e) => {
+            props.onPolygonClicked(i);
+          }}
           onDragEnd={handlePolygonDragEnd}
           onDragMove={handlePolygonDragMove}
           onContextMenu={handlePolygonDelete}
@@ -256,7 +252,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
               id={index.toString()}
               x={pt.x}
               y={pt.y}
-              radius={7 / props.currZoom}
+              radius={props.circlesVisible[i] ? 7 / props.currZoom : 0}
               fill="red"
               opacity={0.3}
               draggable
@@ -274,6 +270,8 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       </>
     );
   }
+
+  /* ********* CUSTOM SHAPE COMPONENTS ABOVE ********* */
 
   return (
     <Stage
