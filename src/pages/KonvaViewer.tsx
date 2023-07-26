@@ -102,15 +102,15 @@ export default function KonvaViewer(): JSX.Element {
     const stage = stageRef.current;
     const dims = document.querySelector("#container")?.getBoundingClientRect();
     if (layer && stage && dims) {
+      setCurrZoom(1);
       const center = {
         x: stage.width() / 2,
         y: stage.height() / 2,
       };
-      var relatedTo = {
-        x: (center.x - layer.x()) / currZoom,
-        y: (center.y - layer.y()) / currZoom,
+      const relatedTo = {
+        x: (center.x - layer.x()) / layer.scaleX(),
+        y: (center.y - layer.y()) / layer.scaleX(),
       };
-      setCurrZoom(1);
       layer.to({
         x: center.x - relatedTo.x,
         y: center.y - relatedTo.y,
@@ -259,6 +259,9 @@ export default function KonvaViewer(): JSX.Element {
       <Link href="/D3Viewer">
         <h5>to D3 Demo</h5>
       </Link>
+      <Link href="./VisxViewer">
+        <h5>to Visx demo</h5>
+      </Link>
       <h3>Konva Demo</h3>
       <div className="headerRow">
         <button
@@ -283,7 +286,7 @@ export default function KonvaViewer(): JSX.Element {
             tractor go brrrr (this img is huge)
           </button>
           <button
-            onClick={() => handleChangeImage("/images/paul.jpg", 15)}
+            onClick={() => handleChangeImage("/images/paul.jpg", 2)}
             className="reset"
           >
             paul (this one has lots of polygons)
@@ -308,7 +311,7 @@ export default function KonvaViewer(): JSX.Element {
           divDimensions={divDimensions}
           circlesVisible={circlesVisible}
         />
-        <div className="chips">
+        {/* <div className="chips">
           {polygonsData.map((polygon, i) => {
             if (polygon.label.coords) {
               return (
@@ -332,7 +335,7 @@ export default function KonvaViewer(): JSX.Element {
               );
             }
           })}
-        </div>
+        </div> */}
       </div>
       <div className="footerRow">
         <div>Current Zoom: {Math.round(currZoom * 100)}%</div>

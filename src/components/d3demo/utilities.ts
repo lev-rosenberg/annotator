@@ -26,7 +26,7 @@ export function isWithinImage(x: number, y: number, scale: number, svg: RefObjec
   }
 }
 
-export function getProportionalCoords(x: number, y: number, svg: RefObject<SVGSVGElement>) {
+export function getProportionalCoordsToSvg(x: number, y: number, svg: RefObject<SVGSVGElement>) {
   /* given coordinates of the element (or pointer) in the container, return the proportional 
   coordinates depending on the zoom and pan. */
 

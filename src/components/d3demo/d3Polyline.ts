@@ -5,7 +5,7 @@ import {
   useCallback,
 } from "react";
 import * as d3 from "d3";
-import { convertPoints, isWithinImage, getProportionalCoords} from "./utilities";
+import { convertPoints, isWithinImage, getProportionalCoordsToSvg} from "./utilities";
 import { Point } from "../../types/annotatorTypes";
 
 interface polylineProps {
@@ -52,7 +52,7 @@ export function PolylineDrawer (props: polylineProps) {
     And then rests the polylinePoints array to empty in order to begin a new polyline. */
 
     const [offsetX, offsetY] = d3.pointer(event, props.svgElement.current);
-    const [x, y] = getProportionalCoords(offsetX, offsetY, props.svgElement);
+    const [x, y] = getProportionalCoordsToSvg(offsetX, offsetY, props.svgElement);
     const newVertex: Point = { x: x, y: y };
     if (closingPoly(newVertex, scale)) {
       setPolylinePoints((prevPoints) => prevPoints.splice(-1));
@@ -71,7 +71,7 @@ export function PolylineDrawer (props: polylineProps) {
     it is close to the starting vertex, then it snaps into place  */
     if (props.isDrawing && polylinePoints.length >= 1) {
       const [offsetX, offsetY] = d3.pointer(e, props.svgElement.current);
-      const [x, y] = getProportionalCoords(offsetX, offsetY, props.svgElement);
+      const [x, y] = getProportionalCoordsToSvg(offsetX, offsetY, props.svgElement);
       const newVertex: Point = { x: x, y: y };
       setPolylinePoints((prevPoints) => {
         const updatedPoints = [...prevPoints];
@@ -104,7 +104,6 @@ export function PolylineDrawer (props: polylineProps) {
         (update) => update.attr("points", (d) => convertPoints(d)),
       )
       .attr("transform", t.toString());
-      
     
       svg.select("image").on("mousemove", function (e) {
         handlePolylineFollowMouseMove(e);

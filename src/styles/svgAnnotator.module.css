@@ -36,3 +36,10 @@
   border-radius: 16px;
   font-size: 14px;
 }
+
+.container {
+  position: relative;
+  width: 85vw;
+  height: 60vh;
+  margin: auto;
+}

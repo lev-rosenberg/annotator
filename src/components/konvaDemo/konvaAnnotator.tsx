@@ -33,7 +33,7 @@ interface PolygonProps {
 export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   const [polylinePoints, setPolylinePoints] = useState<Point[]>([]);
   const [mousePos, setMousePos] = useState<Point>();
-  const zoomBy = 1.04;
+  const zoomBy = 1.05;
   const [image] = useImage(props.currImage);
 
   const layer = props.layerRef.current;
@@ -51,7 +51,6 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
         props.stopDrawing();
         props.onPolygonAdded(polylinePoints);
         setPolylinePoints([]);
-
         setMousePos(undefined);
       }
     }
@@ -290,6 +289,8 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
         }}
         onMouseMove={handleMouseMove}
         draggable={true}
+        width={image?.width}
+        height={image?.height}
         x={0}
         y={0}
         scaleX={0.2}

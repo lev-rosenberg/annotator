@@ -1,19 +1,6 @@
-import {
-  useState,
-  useEffect,
-  useLayoutEffect,
-  RefObject,
-  Dispatch,
-  SetStateAction,
-  useCallback,
-} from "react";
-import {
-  convertPoints,
-  isWithinImage,
-  getProportionalCoords,
-} from "./utilities";
+import { useEffect, RefObject, Dispatch } from "react";
+
 import * as d3 from "d3";
-import styles from "../../styles/svgAnnotator.module.css";
 import { Point, PolygonData } from "../../types/annotatorTypes";
 
 interface annotatorProps {

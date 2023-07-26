@@ -4,11 +4,9 @@ import Link from "next/link";
 import { D3ZoomPan } from "../components/d3demo/d3ZoomPan";
 import { PolylineDrawer } from "../components/d3demo/d3Polyline";
 import { PolygonsDrawer } from "../components/d3demo/d3Polygons";
-import { getProportionalCoords } from "../components/d3demo/utilities";
 
 import FormDialog from "../components/labelPopup";
 import styles from "../styles/svgAnnotator.module.css";
-import Chip from "@mui/material/Chip";
 import * as d3 from "d3";
 import { Dims, LabelData, Point, PolygonData } from "../types/annotatorTypes";
 
@@ -166,6 +164,9 @@ export default function D3Viewer(): JSX.Element {
       <Link href="/KonvaViewer">
         <h5>to Konva Demo</h5>
       </Link>
+      <Link href="./VisxViewer">
+        <h5>to Visx demo</h5>
+      </Link>
       <h3>D3 Annotator demo</h3>
       <div>
         <div className="headerRow">
@@ -186,7 +187,7 @@ export default function D3Viewer(): JSX.Element {
               tractor go brrrr (this img is huge)
             </button>
             <button
-              onClick={() => handleChangeImage("/images/bottles.jpg", 25)}
+              onClick={() => handleChangeImage("/images/bottles.jpg", 20)}
               className="reset"
             >
               shampoo (this one has lots of polygons)
@@ -199,7 +200,6 @@ export default function D3Viewer(): JSX.Element {
             position: "relative",
             maxWidth: "85vw",
             margin: "auto",
-            overflowY: "clip",
           }}
         >
           <svg
@@ -219,7 +219,7 @@ export default function D3Viewer(): JSX.Element {
             />
           </svg>
 
-          {polygonsData.map((polygon, i) => {
+          {/* {polygonsData.map((polygon, i) => {
             return (
               <Chip
                 label={polygon.label.name}
@@ -234,7 +234,7 @@ export default function D3Viewer(): JSX.Element {
                 }}
               />
             );
-          })}
+          })} */}
           <PolylineDrawer
             svgElement={svgRef}
             scaleFactor={scaleFactor}

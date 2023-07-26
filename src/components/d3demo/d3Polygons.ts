@@ -4,7 +4,7 @@ import { Point, PolygonData } from "../../types/annotatorTypes";
 import {
   convertPoints,
   isWithinImage,
-  getProportionalCoords,
+  getProportionalCoordsToSvg,
 } from "./utilities";
 import styles from "../../styles/svgAnnotator.module.css";
 
@@ -52,7 +52,6 @@ export function PolygonsDrawer (props: polygonsProps) {
       newPoints.push(newPoint);
     });
     polygonSvg.attr("points", convertPoints(newPoints));
-
     props.onPolygonChanged(index, newPoints);
   }
 
