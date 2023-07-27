@@ -4,11 +4,10 @@ import { customJson } from "../components/toFromJson";
 import Link from "next/link";
 import KonvaAnnotator from "../components/konvaDemo/konvaAnnotator";
 import Konva from "konva";
-import { Point, LabelData, PolygonData, Dims } from "../types/annotatorTypes";
+import { Point, PolygonData, Dims } from "../types/annotatorTypes";
 import styles from "../styles/konvaAnnotator.module.css";
 import FormDialog from "../components/labelPopup";
 import Chip from "@mui/material/Chip";
-import { image } from "d3-fetch";
 
 export default function KonvaViewer(): JSX.Element {
   const stageRef = useRef<Konva.Stage>(null);
