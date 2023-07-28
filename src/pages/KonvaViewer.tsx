@@ -273,7 +273,7 @@ export default function KonvaViewer(): JSX.Element {
         </button>
         <div>
           <button
-            onClick={() => handleChangeImage("/images/maddoxdev.jpg", 0)}
+            onClick={() => handleChangeImage("/images/maddoxdev.jpg", 1000)}
             className="reset"
           >
             idk what this is tbh (this one is normal)
@@ -285,7 +285,7 @@ export default function KonvaViewer(): JSX.Element {
             tractor go brrrr (this img is huge)
           </button>
           <button
-            onClick={() => handleChangeImage("/images/paul.jpg", 2)}
+            onClick={() => handleChangeImage("/images/paul.jpg", 0)}
             className="reset"
           >
             paul (this one has lots of polygons)

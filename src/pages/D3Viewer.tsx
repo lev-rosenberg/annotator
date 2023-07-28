@@ -175,7 +175,7 @@ export default function D3Viewer(): JSX.Element {
           </button>
           <div>
             <button
-              onClick={() => handleChangeImage("/images/maddoxdev.jpg", 0)}
+              onClick={() => handleChangeImage("/images/maddoxdev.jpg", 1000)}
               className="reset"
             >
               idk what this is tbh (this one is normal)
@@ -187,7 +187,7 @@ export default function D3Viewer(): JSX.Element {
               tractor go brrrr (this img is huge)
             </button>
             <button
-              onClick={() => handleChangeImage("/images/bottles.jpg", 20)}
+              onClick={() => handleChangeImage("/images/bottles.jpg", 0)}
               className="reset"
             >
               shampoo (this one has lots of polygons)
@@ -209,7 +209,7 @@ export default function D3Viewer(): JSX.Element {
             width="100%"
             viewBox={
               "0 0 " + `${imgDimensions?.width} ${imgDimensions?.height}`
-            } // s
+            }
           >
             <image
               href={currImage}

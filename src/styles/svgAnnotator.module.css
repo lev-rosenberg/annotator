@@ -19,6 +19,7 @@
 
 .polygon {
   cursor: move;
+  pointer-events: fill;
 }
 
 .img {
