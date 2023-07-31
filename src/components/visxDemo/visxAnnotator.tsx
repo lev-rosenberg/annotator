@@ -3,11 +3,11 @@ import { LinePath, Line, Circle } from "@visx/shape";
 import { localPoint } from "@visx/event";
 import { Zoom } from "@visx/zoom";
 import { Group } from "@visx/group";
+import { Drag } from "@visx/drag";
+
 import { Point, PolygonData, Dims } from "../../types/annotatorTypes";
-import * as d3Zoom from "d3-zoom";
-import { VisxPolyline } from "./visxPolyline";
+
 import styles from "../../styles/svgAnnotator.module.css";
-import { PolygonsDrawer } from "../d3demo/d3Polygons";
 
 interface annotatorProps {
   currImage: string;
@@ -30,6 +30,9 @@ export function VisxAnnotator(props: annotatorProps) {
   const [mousePos, setMousePos] = useState<Point>();
   const imgRef = useRef<SVGImageElement | null>(null);
   const groupRef = useRef<SVGSVGElement | null>(null);
+
+  const width = props.divDimensions ? props.divDimensions.width! : 100;
+  const height = props.divDimensions ? props.divDimensions.height! : 100;
 
   /* ********* COORDINATE SYSTEM CONVERSION BELOW ********* */
 
@@ -67,7 +70,9 @@ export function VisxAnnotator(props: annotatorProps) {
 
   /* ********* POLYLINE DRAWING BELOW ********* */
 
-  function handleDrawPolylineOnClick(e) {
+  function handleDrawPolylineOnClick(
+    e: React.MouseEvent<SVGElement, MouseEvent>
+  ) {
     const mouse = localPoint(e);
     if (mouse) {
       const prop = convertSvgCoordinatesToImgDims(mouse);
@@ -99,7 +104,7 @@ export function VisxAnnotator(props: annotatorProps) {
     return false;
   }
 
-  function handleMouseMove(e) {
+  function handleMouseMove(e: React.MouseEvent<SVGElement, MouseEvent>) {
     // if (polylinePoints.length > 0) {
     const pointer = localPoint(e);
     if (pointer && !isClosingPolygon(pointer)) {
@@ -123,35 +128,16 @@ export function VisxAnnotator(props: annotatorProps) {
 
   /* ********* POLYLINE DRAWING ABOVE ********* */
 
-  function PolygonsDrawer({ points, key, scale }: PolygonProps) {
-    return (
-      <Group>
-        <LinePath
-          data={points ? [...points, points[0]] : []}
-          // id={key.toString()}
-          stroke="red"
-          strokeWidth={3 / scale}
-          x={(d) => d.x}
-          y={(d) => d.y}
-        />
-        {points?.map((pt) => (
-          <Circle
-            key={key}
-            cx={pt.x}
-            cy={pt.y}
-            r={7 / scale}
-            fill="red"
-            opacity={0.5}
-          />
-        ))}
-      </Group>
-    );
+  /* ********* DRAGGING HANDLERS BELOW ********* */
+
+  function handleDragVertex(e: React.MouseEvent<SVGElement, MouseEvent>) {
+    const vertex = e.target;
   }
 
   return (
     <Zoom<SVGSVGElement>
-      width={props.divDimensions ? props.divDimensions.width! : 100}
-      height={props.divDimensions ? props.divDimensions.height! : 100}
+      width={width}
+      height={height}
       scaleXMin={1 / 20}
       scaleXMax={10}
       scaleYMin={1 / 20}
@@ -162,8 +148,11 @@ export function VisxAnnotator(props: annotatorProps) {
           className={styles.svg}
           width="100%"
           height="100%"
-          ref={zoom.containerRef}
-          touch-action="none"
+          // ref={zoom.containerRef}
+          style={{
+            cursor: zoom.isDragging ? "grabbing" : "grab",
+            touchAction: "none",
+          }}
           onWheel={() => {
             props.setCurrZoom(zoom.transformMatrix.scaleX);
           }}
@@ -185,29 +174,77 @@ export function VisxAnnotator(props: annotatorProps) {
                 className={styles.img}
                 href={props.currImage}
                 ref={imgRef}
-                onDragStart={zoom.dragStart}
-                onDrag={zoom.dragMove}
-                onDragEnd={zoom.dragEnd}
               />
-              <Line // this is the line from the end of the polyline to my mouse as you draw
-                from={polylinePoints.at(-1)}
-                to={polylineToMouse()[1]}
-                strokeWidth={3 / zoom.transformMatrix.scaleX}
-                stroke="red"
-              />
-              <LinePath
-                data={polylinePoints}
-                stroke="red"
-                strokeWidth={3 / zoom.transformMatrix.scaleX}
-                x={(d) => d.x}
-                y={(d) => d.y}
-              />
-              {props.polygonsData.map((polygon, i) => (
-                <PolygonsDrawer
-                  points={polygon.coordinates}
-                  key={i}
-                  scale={zoom.transformMatrix.scaleX}
+              <Group>
+                <Line // this is the line from the end of the polyline to my mouse as you draw
+                  from={polylinePoints.at(-1)}
+                  to={polylineToMouse()[1]}
+                  strokeWidth={3 / zoom.transformMatrix.scaleX}
+                  stroke="red"
                 />
+                <LinePath
+                  data={polylinePoints}
+                  stroke="red"
+                  strokeWidth={3 / zoom.transformMatrix.scaleX}
+                  x={(d) => d.x}
+                  y={(d) => d.y}
+                />
+              </Group>
+
+              {props.polygonsData.map((polygon, i) => (
+                <Drag key={i} width={width} height={height}>
+                  {({
+                    dragStart,
+                    dragEnd,
+                    dragMove,
+                    isDragging,
+                    x,
+                    y,
+                    dx,
+                    dy,
+                  }) => (
+                    <Group key={i} transform={`translate(${dx}, ${dy})`}>
+                      <LinePath
+                        data={
+                          polygon.coordinates
+                            ? [...polygon.coordinates, polygon.coordinates[0]]
+                            : []
+                        }
+                        style={{
+                          cursor: "move",
+                        }}
+                        stroke="red"
+                        strokeWidth={3 / zoom.transformMatrix.scaleX}
+                        x={(d) => d.x}
+                        y={(d) => d.y}
+                      />
+                      {polygon.coordinates?.map((pt, i) => (
+                        <Circle
+                          key={i}
+                          cx={pt.x}
+                          cy={pt.y}
+                          r={7 / zoom.transformMatrix.scaleX}
+                          fill="red"
+                          opacity={0.5}
+                          style={{
+                            cursor: "crosshair",
+                          }}
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            dragStart(e);
+                          }}
+                          onMouseMove={(e) => {
+                            isDragging ? dragMove(e) : console.log("nar");
+                          }}
+                          onMouseUp={(e) => {
+                            e.stopPropagation();
+                            dragEnd(e);
+                          }}
+                        />
+                      ))}
+                    </Group>
+                  )}
+                </Drag>
               ))}
               {/* <VisxPolyline
                 scale={zoom.transformMatrix.scaleX}
