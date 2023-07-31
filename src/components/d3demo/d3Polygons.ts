@@ -29,13 +29,14 @@ export function PolygonsDrawer (props: polygonsProps) {
 
   /* ********** DRAGGING HANDLERS ********** */
 
-  const polyDrag = d3.drag().on("drag", function (e: DragEvent) {
+  const polyDrag = d3.drag().on("drag", function (e: d3.D3DragEvent<SVGCircleElement, SVGSVGElement, SVGSVGElement>) {
     if (!props.isDrawing && isWithinImage(e.x, e.y, scale, props.svgElement)) {
       handlePolygonDrag(this, e);
     }
   });
 
-  function handlePolygonDrag(polygon: Element, e: any) {
+  function handlePolygonDrag(polygon: Element, e: d3.D3DragEvent<SVGCircleElement, SVGSVGElement, SVGSVGElement>) {
+    console.log(e)
     const polygonGroup = d3.select(polygon.parentElement);
     const circles = polygonGroup.selectAll("circle");
     const polygonSvg = polygonGroup.selectAll("polygon");
@@ -43,8 +44,8 @@ export function PolygonsDrawer (props: polygonsProps) {
     const newPoints: Point[] = [];
     circles.nodes().forEach((circle) => {
       d3.select(circle)
-        .attr("cx", (d: any) => d.x + e.dx)
-        .attr("cy", (d: any) => d.y + e.dy);
+        .attr("cx", (d) => (d as Point).x+ e.dx)
+        .attr("cy", (d) => (d as Point).y + e.dy);
       const newPoint = {
         x: parseFloat(d3.select(circle).attr("cx")),
         y: parseFloat(d3.select(circle).attr("cy")),
@@ -120,7 +121,7 @@ export function PolygonsDrawer (props: polygonsProps) {
           return polygon;
         },
         (update) => {
-          /* Update existing polygons and circles with any data that might have changed */
+          /* Update existing polygons and circles with changed data */
           update
             .selectAll("circle")
             .data((d) => d.coordinates as Point[])
@@ -145,8 +146,8 @@ export function PolygonsDrawer (props: polygonsProps) {
       )
       .attr("transform", t.toString());
 
-    svg.selectAll("circle").call(circleDrag as any);
-    svg.selectAll("polygon").call(polyDrag as any);
+    svg.selectAll<Element, unknown>("circle").call(circleDrag);
+    svg.selectAll<Element, unknown>("polygon").call(polyDrag);
 
     //deletion
     svg.selectAll(".polygon-group").on("contextmenu", function (e) {

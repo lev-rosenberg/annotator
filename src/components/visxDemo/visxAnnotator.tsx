@@ -18,6 +18,7 @@ interface annotatorProps {
   setCurrZoom: Dispatch<number>;
   onPolygonAdded: (points: Point[]) => void;
   onPolygonChanged: (index: number, points: Point[]) => void;
+
   onPolygonDeleted: (index: number) => void;
 }
 interface PolygonProps {
@@ -28,6 +29,8 @@ interface PolygonProps {
 export function VisxAnnotator(props: annotatorProps) {
   const [polylinePoints, setPolylinePoints] = useState<Point[]>([]);
   const [mousePos, setMousePos] = useState<Point>();
+  const [selectedPolygon, setSelectedPolygon] = useState<Point[]>([]);
+
   const imgRef = useRef<SVGImageElement | null>(null);
   const groupRef = useRef<SVGSVGElement | null>(null);
 
@@ -130,8 +133,18 @@ export function VisxAnnotator(props: annotatorProps) {
 
   /* ********* DRAGGING HANDLERS BELOW ********* */
 
-  function handleDragVertex(e: React.MouseEvent<SVGElement, MouseEvent>) {
-    const vertex = e.target;
+  function handlePolygonDragMove(
+    e: React.MouseEvent<SVGElement, MouseEvent>,
+    dx: number,
+    dy: number
+  ) {
+    const index = parseInt(e.currentTarget.id);
+    let newPoints: Point[] = [];
+
+    selectedPolygon.map((pt) => {
+      newPoints.push({ x: pt.x + dx, y: pt.y + dy });
+    });
+    props.onPolygonChanged(index, newPoints);
   }
 
   return (
@@ -164,7 +177,8 @@ export function VisxAnnotator(props: annotatorProps) {
             x={zoom.transformMatrix.translateX}
             y={zoom.transformMatrix.translateY}
             scale={zoom.transformMatrix.scaleX}
-            onClick={(e) => {
+            onMouseDown={(e) => {
+              e.stopPropagation();
               handleDrawPolylineOnClick(e);
             }}
             onMouseMove={handleMouseMove}
@@ -192,7 +206,7 @@ export function VisxAnnotator(props: annotatorProps) {
               </Group>
 
               {props.polygonsData.map((polygon, i) => (
-                <Drag key={i} width={width} height={height}>
+                <Drag key={i} width={width} height={height} resetOnStart>
                   {({
                     dragStart,
                     dragEnd,
@@ -203,7 +217,29 @@ export function VisxAnnotator(props: annotatorProps) {
                     dx,
                     dy,
                   }) => (
-                    <Group key={i} transform={`translate(${dx}, ${dy})`}>
+                    <Group
+                      key={i}
+                      id={i.toString()}
+                      // transform={`translate(${dx}, ${dy})`}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        dragStart(e);
+                        setSelectedPolygon(polygon.coordinates);
+                        console.log("h");
+                      }}
+                      onMouseMove={(e) => {
+                        if (isDragging) {
+                          dragMove(e);
+                          handlePolygonDragMove(e, dx, dy);
+                          console.log(dx);
+                        }
+                      }}
+                      onMouseUp={(e) => {
+                        e.stopPropagation();
+                        dragEnd(e);
+                        setSelectedPolygon([]);
+                      }}
+                    >
                       <LinePath
                         data={
                           polygon.coordinates
@@ -228,17 +264,6 @@ export function VisxAnnotator(props: annotatorProps) {
                           opacity={0.5}
                           style={{
                             cursor: "crosshair",
-                          }}
-                          onMouseDown={(e) => {
-                            e.stopPropagation();
-                            dragStart(e);
-                          }}
-                          onMouseMove={(e) => {
-                            isDragging ? dragMove(e) : console.log("nar");
-                          }}
-                          onMouseUp={(e) => {
-                            e.stopPropagation();
-                            dragEnd(e);
                           }}
                         />
                       ))}

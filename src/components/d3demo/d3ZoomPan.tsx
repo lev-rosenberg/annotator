@@ -14,7 +14,7 @@ interface annotatorProps {
 }
 
 export function D3ZoomPan(props: annotatorProps) {
-  const svg = d3.select(props.svgElement.current); //the SVG overall layer
+  const svg = d3.select<SVGSVGElement, unknown>(props.svgElement.current!); //the SVG overall layer
   let t: d3.ZoomTransform; //the state of the zoom and pan of the svg
   props.svgElement.current
     ? (t = d3.zoomTransform(props.svgElement.current))
@@ -24,7 +24,7 @@ export function D3ZoomPan(props: annotatorProps) {
   /* ********** ZOOM AND PAN HANDLERS ********** */
 
   const zoom = d3
-    .zoom()
+    .zoom<SVGSVGElement, unknown>()
     .scaleExtent([0.05 * scale, 10 * scale])
     .on("start", function (e) {
       t = e.transform;
@@ -41,7 +41,10 @@ export function D3ZoomPan(props: annotatorProps) {
       props.setIsDraggingLayer(false);
     });
 
-  function handleSvgZoom(e: any, scale: number) {
+  function handleSvgZoom(
+    e: d3.D3ZoomEvent<SVGElement, SVGElement>,
+    scale: number
+  ) {
     /* make all svg groups transform proportionate to the current zoom and pan */
     const t = e.transform;
     d3.selectAll(".polygon-group").attr("transform", t.toString());
@@ -57,19 +60,13 @@ export function D3ZoomPan(props: annotatorProps) {
   /* ********** UTILITY FUNCTIONS ********** */
 
   useEffect(() => {
-    svg.call(zoom as any, d3.zoomTransform);
+    svg.call(zoom, d3.zoomTransform);
 
     d3.selectAll(".reset").on("click", () => {
-      svg
-        .transition()
-        .duration(250)
-        .call(zoom.transform as any, d3.zoomIdentity);
+      svg.transition().duration(250).call(zoom.transform, d3.zoomIdentity);
     });
     d3.select(".fullsize").on("click", (e) => {
-      svg
-        .transition()
-        .duration(250)
-        .call(zoom.scaleTo as any, scale);
+      svg.transition().duration(250).call(zoom.scaleTo, scale);
     });
     props.setCurrentZoom(t.k / scale);
   }, [
