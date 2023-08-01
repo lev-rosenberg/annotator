@@ -88,7 +88,8 @@ export function PolylineDrawer (props: polylineProps) {
 
   useEffect(() => {
 
-    svg
+    polylinePoints.length && 
+      svg
       .selectAll(".drawing-polyline")
       .data([polylinePoints])
       .join(
@@ -105,14 +106,16 @@ export function PolylineDrawer (props: polylineProps) {
       )
       .attr("transform", t.toString());
     
-      svg.select("image").on("mousemove", function (e) {
-        handlePolylineFollowMouseMove(e);
-      });
-      svg.on("click", function (e) {
-        if (props.isDrawing && isWithinImage(e.x, e.y, scale, props.svgElement)) {
-          handleDrawPolylineOnClick(e);
-        }
-      });
+    
+    
+    svg.select("image").on("mousemove", function (e) {
+      handlePolylineFollowMouseMove(e);
+    });
+    svg.on("click", function (e) {
+      if (props.isDrawing && isWithinImage(e.x, e.y, scale, props.svgElement)) {
+        handleDrawPolylineOnClick(e);
+      }
+    });
     return () => {
       svg.on("mousedown", null);
       svg.on("click", null);

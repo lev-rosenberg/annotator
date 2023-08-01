@@ -13,7 +13,7 @@ export default function D3Viewer(): JSX.Element {
   const [currZoom, setCurrZoom] = useState(1);
   const [polygonsData, setPolygonsData] = useState<PolygonData[]>([]);
   const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
-
+  const [isDrawing, setIsDrawing] = useState<boolean>(false);
   useEffect(() => {
     const img = new Image();
     img.onload = function () {
@@ -43,6 +43,7 @@ export default function D3Viewer(): JSX.Element {
       { coordinates: draftPolygon, label: newLabel },
     ]);
     setDraftPolygon(null);
+    setIsDrawing(false);
   }
 
   function handlePolygonChanged(index: number, points: Point[]) {
@@ -73,7 +74,21 @@ export default function D3Viewer(): JSX.Element {
       <Link href="./KonvaViewer">
         <h5>to Konva demo</h5>
       </Link>
-
+      <h3>Visx annotator demo</h3>
+      <div className="headerRow">
+        <button onClick={() => setIsDrawing(!isDrawing)}>
+          {isDrawing ? "Stop drawing" : "Start drawing"}
+        </button>
+        <div>
+          <button className="reset">
+            idk what this is tbh (this one is normal)
+          </button>
+          <button className="reset">tractor go brrrr (this img is huge)</button>
+          <button className="reset">
+            shampoo (this one has lots of polygons)
+          </button>
+        </div>
+      </div>
       <div id="container" className={styles.container} ref={svgContainerRef}>
         <VisxAnnotator
           currImage={currImage}
@@ -81,6 +96,7 @@ export default function D3Viewer(): JSX.Element {
           imgOriginalDims={imgDimensions}
           currZoom={currZoom}
           setCurrZoom={setCurrZoom}
+          isDrawing={isDrawing}
           polygonsData={polygonsData}
           onPolygonAdded={(points: Point[]) => setDraftPolygon(points)}
           onPolygonChanged={(index: number, points: Point[]) =>
@@ -92,6 +108,13 @@ export default function D3Viewer(): JSX.Element {
           dialogueOpen={draftPolygon != null}
           onLabelSelect={handleLabelSelect}
         />
+      </div>
+      <div className="footerRow">
+        <div>Current Zoom: {Math.round(currZoom * 100)}%</div>
+        <div>
+          <button className="reset">Fit to container</button>
+          <button className="fullsize">Zoom to 100%</button>
+        </div>
       </div>
       <ul className={styles.li}>
         {polygonsData.map((polygon, i) => (
