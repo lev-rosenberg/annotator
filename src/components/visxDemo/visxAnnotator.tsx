@@ -41,6 +41,14 @@ export function VisxAnnotator(props: annotatorProps) {
   const width = props.divDimensions ? props.divDimensions.width! : 100;
   const height = props.divDimensions ? props.divDimensions.height! : 100;
 
+  const initialTransform = {
+    scaleX: 0.15,
+    scaleY: 0.15,
+    translateX: 0,
+    translateY: 0,
+    skewX: 0,
+    skewY: 0,
+  };
   /* ********* POLYLINE DRAWING BELOW ********* */
 
   function handleDrawPolylineOnClick(
@@ -111,16 +119,16 @@ export function VisxAnnotator(props: annotatorProps) {
     polygonCoords: Point[] | null
   ) {
     const vertices = Array.from(e.currentTarget.children).slice(1);
-    const polyline = e.currentTarget.firstElementChild;
-    dx = dx / zoom;
-    dy = dy / zoom;
-    if (vertices && polyline && polygonCoords) {
+    const polygon = e.currentTarget.firstElementChild;
+    dx /= zoom;
+    dy /= zoom;
+    if (vertices && polygon && polygonCoords) {
       const newPoints = polygonCoords.map((pt, i) => {
         vertices[i].setAttribute("cx", (pt.x + dx).toString());
         vertices[i].setAttribute("cy", (pt.y + dy).toString());
         return { x: pt.x + dx, y: pt.y + dy };
       });
-      polyline.setAttribute(
+      polygon.setAttribute(
         "points",
         convertPolygonPoints(newPoints).toString()
       );
@@ -135,8 +143,8 @@ export function VisxAnnotator(props: annotatorProps) {
     polygonCoords: Point[] | null
   ) {
     const index = parseInt(e.currentTarget.id);
-    dx = dx / zoom;
-    dy = dy / zoom;
+    dx /= zoom;
+    dy /= zoom;
     if (polygonCoords) {
       const newPoints = polygonCoords.map((pt) => {
         return { x: pt.x + dx, y: pt.y + dy };
@@ -145,16 +153,66 @@ export function VisxAnnotator(props: annotatorProps) {
     }
   }
 
+  function handleVertexDragMove(
+    e: React.MouseEvent<SVGElement, MouseEvent>,
+    dx: number,
+    dy: number,
+    zoom: number,
+    polygonCoords: Point[] | null
+  ) {
+    const polygon = e.currentTarget.parentNode?.firstElementChild;
+    if (polygonCoords && polygon) {
+      dx /= zoom;
+      dy /= zoom;
+      const c_index = parseInt(e.currentTarget.id);
+      const { x, y } = polygonCoords[c_index];
+      e.currentTarget.setAttribute("cx", (x + dx).toString());
+      e.currentTarget.setAttribute("cy", (y + dy).toString());
+
+      const newPoints = [...polygonCoords];
+      newPoints[c_index] = { x: x + dx, y: y + dy };
+      polygon.setAttribute(
+        "points",
+        convertPolygonPoints(newPoints).toString()
+      );
+    }
+  }
+
+  function handleVertexDragEnd(
+    e: React.MouseEvent<SVGElement, MouseEvent>,
+    dx: number,
+    dy: number,
+    zoom: number,
+    polygonCoords: Point[] | null
+  ) {
+    const polygon = e.currentTarget.parentElement;
+    if (polygon) {
+      const p_index = parseInt(polygon.id);
+      const c_index = parseInt(e.currentTarget.id);
+
+      dx /= zoom;
+      dy /= zoom;
+      if (polygonCoords) {
+        const newPoints = [...polygonCoords];
+        const { x, y } = polygonCoords[c_index];
+
+        newPoints[c_index] = { x: x + dx, y: y + dy };
+        console.log(newPoints);
+        props.onPolygonChanged(p_index, newPoints);
+      }
+    }
+  }
+
   function handlePolygonDelete(e: React.MouseEvent<SVGElement, MouseEvent>) {
     e.preventDefault();
     const p_index = parseInt(e.currentTarget.id);
     props.onPolygonDeleted(p_index);
   }
-
   return (
     <Zoom<SVGSVGElement>
       width={width}
       height={height}
+      initialTransformMatrix={initialTransform}
       scaleXMin={1 / 20}
       scaleXMax={10}
       scaleYMin={1 / 20}
@@ -175,7 +233,7 @@ export function VisxAnnotator(props: annotatorProps) {
           }}
         >
           <Group
-            width="100%"
+            width={props.imgOriginalDims?.width! * zoom.transformMatrix.scaleX}
             transform={zoom.toString()}
             innerRef={groupRef}
             x={zoom.transformMatrix.translateX}
@@ -221,7 +279,24 @@ export function VisxAnnotator(props: annotatorProps) {
               )}
 
               {props.polygonsData.map((polygon, i) => (
-                <Drag key={i} width={width} height={height} resetOnStart>
+                <Drag
+                  key={i}
+                  width={width}
+                  height={height}
+                  resetOnStart
+                  restrict={{
+                    xMin: zoom.transformMatrix.translateX,
+                    xMax:
+                      zoom.transformMatrix.translateX +
+                      props.imgOriginalDims?.width! *
+                        zoom.transformMatrix.scaleX,
+                    yMin: zoom.transformMatrix.translateY,
+                    yMax:
+                      zoom.transformMatrix.translateY +
+                      props.imgOriginalDims?.height! *
+                        zoom.transformMatrix.scaleX,
+                  }}
+                >
                   {({ dragStart, dragEnd, dragMove, dx, dy }) => (
                     <Group
                       key={i}
@@ -230,10 +305,13 @@ export function VisxAnnotator(props: annotatorProps) {
                         if (e.button == 0) {
                           e.stopPropagation();
                           dragStart(e);
+
                           setPolygonDragging(true);
                         }
                       }}
                       onMouseMove={(e) => {
+                        e.stopPropagation();
+
                         if (polygonDragging) {
                           dragMove(e);
                           handlePolygonDragMove(
@@ -275,6 +353,7 @@ export function VisxAnnotator(props: annotatorProps) {
                       {polygon.coordinates?.map((pt, i) => (
                         <Circle
                           key={i}
+                          id={i.toString()}
                           cx={pt.x}
                           cy={pt.y}
                           r={7 / zoom.transformMatrix.scaleX}
@@ -283,25 +362,44 @@ export function VisxAnnotator(props: annotatorProps) {
                           style={{
                             cursor: "crosshair",
                           }}
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            dragStart(e);
+                            console.log(e.currentTarget);
+                            setPolygonDragging(true);
+                          }}
+                          onMouseMove={(e) => {
+                            e.stopPropagation();
+
+                            if (polygonDragging) {
+                              dragMove(e);
+                              handleVertexDragMove(
+                                e,
+                                dx,
+                                dy,
+                                zoom.transformMatrix.scaleX,
+                                polygon.coordinates
+                              );
+                            }
+                          }}
+                          onMouseUp={(e) => {
+                            e.stopPropagation();
+                            dragEnd(e);
+                            handleVertexDragEnd(
+                              e,
+                              dx,
+                              dy,
+                              zoom.transformMatrix.scaleX,
+                              polygon.coordinates
+                            );
+                            setPolygonDragging(false);
+                          }}
                         />
                       ))}
                     </Group>
                   )}
                 </Drag>
               ))}
-              {/* <VisxPolyline
-                scale={zoom.transformMatrix.scaleX}
-                getPropToOriginal={(pt: Point) =>
-                  getProportionalCoordsToImgOriginal(pt, props.imgOriginalDims)
-                }
-                getPropToRelative={(pt: Point) =>
-                  getProportionalCoordsToImgRelative(pt)
-                }
-                onPolygonAdded={(points: Point[]) =>
-                  props.onPolygonAdded(points)
-                }
-                groupRef={groupRef}
-              /> */}
             </>
           </Group>
         </svg>

@@ -10,7 +10,7 @@ export default function D3Viewer(): JSX.Element {
   const [divDimensions, setDivDimensions] = useState<Dims | undefined>();
   const [imgDimensions, setImgDimensions] = useState<Dims | undefined>();
   const [currImage, setCurrImage] = useState("/images/maddoxdev.jpg");
-  const [currZoom, setCurrZoom] = useState(1);
+  const [currZoom, setCurrZoom] = useState(0.15);
   const [polygonsData, setPolygonsData] = useState<PolygonData[]>([]);
   const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
