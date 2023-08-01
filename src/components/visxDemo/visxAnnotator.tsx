@@ -189,7 +189,6 @@ export function VisxAnnotator(props: annotatorProps) {
     if (polygon) {
       const p_index = parseInt(polygon.id);
       const c_index = parseInt(e.currentTarget.id);
-
       dx /= zoom;
       dy /= zoom;
       if (polygonCoords) {
@@ -265,13 +264,13 @@ export function VisxAnnotator(props: annotatorProps) {
                   <Line // this is the line from the end of the polyline to my mouse as you draw
                     from={polylinePoints.at(-1)}
                     to={polylineToMouse()[1]}
-                    strokeWidth={3 / zoom.transformMatrix.scaleX}
+                    strokeWidth={2 / zoom.transformMatrix.scaleX}
                     stroke="red"
                   />
                   <LinePath
                     data={polylinePoints}
                     stroke="red"
-                    strokeWidth={3 / zoom.transformMatrix.scaleX}
+                    strokeWidth={2 / zoom.transformMatrix.scaleX}
                     x={(d) => d.x}
                     y={(d) => d.y}
                   />
@@ -348,7 +347,7 @@ export function VisxAnnotator(props: annotatorProps) {
                         }}
                         fill="transparent"
                         stroke="red"
-                        strokeWidth={3 / zoom.transformMatrix.scaleX}
+                        strokeWidth={2 / zoom.transformMatrix.scaleX}
                       />
                       {polygon.coordinates?.map((pt, i) => (
                         <Circle
@@ -356,7 +355,7 @@ export function VisxAnnotator(props: annotatorProps) {
                           id={i.toString()}
                           cx={pt.x}
                           cy={pt.y}
-                          r={7 / zoom.transformMatrix.scaleX}
+                          r={6 / zoom.transformMatrix.scaleX}
                           fill="red"
                           opacity={0.5}
                           style={{
@@ -370,7 +369,6 @@ export function VisxAnnotator(props: annotatorProps) {
                           }}
                           onMouseMove={(e) => {
                             e.stopPropagation();
-
                             if (polygonDragging) {
                               dragMove(e);
                               handleVertexDragMove(

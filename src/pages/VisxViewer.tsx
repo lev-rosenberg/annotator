@@ -4,6 +4,7 @@ import { VisxAnnotator } from "../components/visxDemo/visxAnnotator";
 import styles from "../styles/svgAnnotator.module.css";
 import { Dims, Point, PolygonData } from "../types/annotatorTypes";
 import FormDialog from "../components/labelPopup";
+import { customJson } from "../components/toFromJson";
 
 export default function D3Viewer(): JSX.Element {
   const svgContainerRef = useRef<HTMLDivElement>(null);
@@ -14,6 +15,9 @@ export default function D3Viewer(): JSX.Element {
   const [polygonsData, setPolygonsData] = useState<PolygonData[]>([]);
   const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
+
+  /* ****** IMAGE LOADING BELOW ****** */
+
   useEffect(() => {
     const img = new Image();
     img.onload = function () {
@@ -31,6 +35,26 @@ export default function D3Viewer(): JSX.Element {
       height: svgContainerRef.current?.clientHeight,
     });
   }
+
+  /* ****** IMAGE LOADING ABOVE ****** */
+
+  function handleChangeImage(image: string, num: number) {
+    const img = new Image();
+    img.onload = function () {
+      const jsonData = customJson(num, img.naturalWidth, img.naturalHeight);
+      // handleZoomFitContainer(img.width, img.height);
+      // labelsToCoords();
+      setImgDimensions({ width: img.width, height: img.height });
+      setPolygonsData(jsonData);
+      // handleCirclesNotVisible();
+      setCurrImage(image);
+    };
+    img.src = image;
+    setIsDrawing(false);
+    //
+  }
+
+  /* ****** POLYGON DATA UPDATING BELOW ****** */
 
   function handleLabelSelect(option: string) {
     const newLabel = {
@@ -63,6 +87,8 @@ export default function D3Viewer(): JSX.Element {
     });
   }
 
+  /* ****** POLYGON DATA UPDATING ABOVE ****** */
+
   return (
     <div>
       <Link href="/">
@@ -80,12 +106,23 @@ export default function D3Viewer(): JSX.Element {
           {isDrawing ? "Stop drawing" : "Start drawing"}
         </button>
         <div>
-          <button className="reset">
+          <button
+            onClick={() => handleChangeImage("/images/maddoxdev.jpg", 0)}
+            className="reset"
+          >
             idk what this is tbh (this one is normal)
           </button>
-          <button className="reset">tractor go brrrr (this img is huge)</button>
-          <button className="reset">
-            shampoo (this one has lots of polygons)
+          <button
+            onClick={() => handleChangeImage("/images/bigimage.jpg", 0)}
+            className="reset"
+          >
+            tractor go brrrr (this img is huge)
+          </button>
+          <button
+            onClick={() => handleChangeImage("/images/paul.jpg", 0)}
+            className="reset"
+          >
+            paul (lots of polygons)
           </button>
         </div>
       </div>

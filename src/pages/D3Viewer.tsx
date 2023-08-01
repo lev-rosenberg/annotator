@@ -258,6 +258,7 @@ export default function D3Viewer(): JSX.Element {
             setIsDraggingLayer={(bool) => setIsZoomingOrPanning(bool)}
             scaleFactor={scaleFactor}
           />
+
           <FormDialog
             dialogueOpen={draftPolygon != null}
             onLabelSelect={(option) => handleLabelSelect(option)}

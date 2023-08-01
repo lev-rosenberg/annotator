@@ -5,7 +5,6 @@ import useImage from "use-image";
 import { KonvaEventObject } from "konva/lib/Node";
 import { Stage, Layer, Circle, Line, Image, Group } from "react-konva";
 import Konva from "konva";
-import { ImageOptimizerCache } from "next/dist/server/image-optimizer";
 
 interface annotatorProps {
   currImage: string;

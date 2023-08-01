@@ -50,7 +50,7 @@ export function PolylineDrawer (props: polylineProps) {
     /* Adds new point to polyline if newVertex is not closing the polygon. 
     Otherwise sets the polygonsData array to hold the points of the polyline.
     And then rests the polylinePoints array to empty in order to begin a new polyline. */
-
+    console.log("hi")
     const [offsetX, offsetY] = d3.pointer(event, props.svgElement.current);
     const [x, y] = getProportionalCoordsToSvg(offsetX, offsetY, props.svgElement);
     const newVertex: Point = { x: x, y: y };
@@ -96,13 +96,14 @@ export function PolylineDrawer (props: polylineProps) {
         (enter) =>
           enter
             .append("polyline")
-            .attr("class", "drawing-polygon")
-            .attr("id", "drawing-polygon")
+            .attr("class", "drawing-polyline")
+            .attr("id", "drawing-polyline")
             .attr("stroke", "red")
             .attr("fill", "none")
             .attr("stroke-width", (2 * scale) / t.k)
             .attr("points", (d) => convertPoints(d)),
         (update) => update.attr("points", (d) => convertPoints(d)),
+        (exit) => exit.remove(),
       )
       .attr("transform", t.toString());
     
@@ -112,6 +113,8 @@ export function PolylineDrawer (props: polylineProps) {
       handlePolylineFollowMouseMove(e);
     });
     svg.on("click", function (e) {
+      e.preventDefault()
+      e.stopPropagation()
       if (props.isDrawing && isWithinImage(e.x, e.y, scale, props.svgElement)) {
         handleDrawPolylineOnClick(e);
       }
@@ -121,7 +124,7 @@ export function PolylineDrawer (props: polylineProps) {
       svg.on("click", null);
       svg.on("mousemove", null);
       svg.on("mouseup", null);
-      svg.select("#drawing-polygon").remove();
+      !polylinePoints.length ? svg.select('.drawing-polyline').remove() : null
     };
    
   }, [handleDrawPolylineOnClick, handlePolylineFollowMouseMove, polylinePoints, props.isDrawing, props.svgElement, scale, svg, t])

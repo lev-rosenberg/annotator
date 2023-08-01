@@ -23,6 +23,7 @@ export default function KonvaViewer(): JSX.Element {
 
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [isDraggingLayer, setIsDraggingLayer] = useState<boolean>(false);
+  const [viewLabels, setViewLabels] = useState<boolean>(true);
 
   const layer = layerRef.current;
   const stage = stageRef.current;
@@ -273,7 +274,7 @@ export default function KonvaViewer(): JSX.Element {
         </button>
         <div>
           <button
-            onClick={() => handleChangeImage("/images/maddoxdev.jpg", 1000)}
+            onClick={() => handleChangeImage("/images/maddoxdev.jpg", 0)}
             className="reset"
           >
             idk what this is tbh (this one is normal)
@@ -310,52 +311,59 @@ export default function KonvaViewer(): JSX.Element {
           divDimensions={divDimensions}
           circlesVisible={circlesVisible}
         />
-        {/* <div className="chips">
-          {polygonsData.map((polygon, i) => {
-            if (polygon.label.coords) {
-              return (
-                <Chip
-                  label={polygon.label.name}
-                  color="primary"
-                  size="small"
-                  key={i}
-                  sx={{
-                    position: "absolute",
-                    top: `${polygon.label.coords?.y}px`,
-                    left: `${polygon.label.coords?.x}px`,
-                    display: isLabelChipVisible(
-                      polygon.label.coords.x,
-                      polygon.label.coords.y
-                    )
-                      ? "flex"
-                      : "none",
-                  }}
-                />
-              );
-            }
-          })}
-        </div> */}
+        {viewLabels && (
+          <div className="chips">
+            {polygonsData.map((polygon, i) => {
+              if (polygon.label.coords) {
+                return (
+                  <Chip
+                    label={polygon.label.name}
+                    color="primary"
+                    size="small"
+                    key={i}
+                    sx={{
+                      position: "absolute",
+                      top: `${polygon.label.coords?.y}px`,
+                      left: `${polygon.label.coords?.x}px`,
+                      display: isLabelChipVisible(
+                        polygon.label.coords.x,
+                        polygon.label.coords.y
+                      )
+                        ? "flex"
+                        : "none",
+                    }}
+                  />
+                );
+              }
+            })}
+          </div>
+        )}
       </div>
       <div className="footerRow">
-        <div>Current Zoom: {Math.round(currZoom * 100)}%</div>
         <div>
-          <button className="fullsize" onClick={handleZoom100}>
-            Zoom to 100%
-          </button>
-          <button
-            className="fit-container"
-            onClick={() =>
-              imgDimensions
-                ? handleZoomFitContainer(
-                    imgDimensions?.width!,
-                    imgDimensions?.height!
-                  )
-                : console.log("nope")
-            }
-          >
-            Fit to container
-          </button>
+          <div>Current Zoom: {Math.round(currZoom * 100)}%</div>
+          <div>
+            <button className="fullsize" onClick={handleZoom100}>
+              Zoom to 100%
+            </button>
+            <button
+              className="fit-container"
+              onClick={() =>
+                imgDimensions
+                  ? handleZoomFitContainer(
+                      imgDimensions?.width!,
+                      imgDimensions?.height!
+                    )
+                  : console.log("nope")
+              }
+            >
+              Fit to container
+            </button>
+          </div>
         </div>
+        <button onClick={() => setViewLabels(!viewLabels)}>
+          {viewLabels ? "Hide Labels" : "View Labels"}
+        </button>
       </div>
       <FormDialog
         dialogueOpen={draftPolygon != null}
