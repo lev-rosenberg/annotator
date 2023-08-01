@@ -1,13 +1,15 @@
 import React, { useRef, RefObject, useEffect, useState, Dispatch } from "react";
-import { LinePath, Line, Circle } from "@visx/shape";
+import { LinePath, Line, Circle, Polygon } from "@visx/shape";
 import { localPoint } from "@visx/event";
 import { Zoom } from "@visx/zoom";
 import { Group } from "@visx/group";
 import { Drag } from "@visx/drag";
+import { convertPoints } from "./utilities";
 
 import { Point, PolygonData, Dims } from "../../types/annotatorTypes";
 
 import styles from "../../styles/svgAnnotator.module.css";
+import { drag } from "d3-drag";
 
 interface annotatorProps {
   currImage: string;
@@ -29,10 +31,10 @@ interface PolygonProps {
 export function VisxAnnotator(props: annotatorProps) {
   const [polylinePoints, setPolylinePoints] = useState<Point[]>([]);
   const [mousePos, setMousePos] = useState<Point>();
-  const [selectedPolygon, setSelectedPolygon] = useState<Point[]>([]);
 
   const imgRef = useRef<SVGImageElement | null>(null);
   const groupRef = useRef<SVGSVGElement | null>(null);
+  const dragRef = useRef();
 
   const width = props.divDimensions ? props.divDimensions.width! : 100;
   const height = props.divDimensions ? props.divDimensions.height! : 100;
@@ -136,15 +138,38 @@ export function VisxAnnotator(props: annotatorProps) {
   function handlePolygonDragMove(
     e: React.MouseEvent<SVGElement, MouseEvent>,
     dx: number,
-    dy: number
+    dy: number,
+    polygonCoords: Point[] | null
+  ) {
+    const index = parseInt(e.currentTarget.id);
+    const vertices = Array.from(e.currentTarget.children).slice(1);
+    const polyline = e.currentTarget.firstElementChild;
+    let newPoints: Point[] = [];
+
+    if (vertices && polyline && polygonCoords) {
+      polygonCoords.map((pt, i) => {
+        vertices[i].setAttribute("cx", (pt.x + dx).toString());
+        vertices[i].setAttribute("cy", (pt.y + dy).toString());
+        newPoints.push({ x: pt.x + dx, y: pt.y + dy });
+      });
+      polyline.setAttribute("points", convertPoints(newPoints).toString());
+    }
+  }
+
+  function handlePolygonDragEnd(
+    e: React.MouseEvent<SVGElement, MouseEvent>,
+    dx: number,
+    dy: number,
+    polygonCoords: Point[] | null
   ) {
     const index = parseInt(e.currentTarget.id);
     let newPoints: Point[] = [];
-
-    selectedPolygon.map((pt) => {
-      newPoints.push({ x: pt.x + dx, y: pt.y + dy });
-    });
-    props.onPolygonChanged(index, newPoints);
+    if (polygonCoords) {
+      polygonCoords.map((pt) => {
+        newPoints.push({ x: pt.x + dx, y: pt.y + dy });
+      });
+      props.onPolygonChanged(index, newPoints);
+    }
   }
 
   return (
@@ -207,52 +232,34 @@ export function VisxAnnotator(props: annotatorProps) {
 
               {props.polygonsData.map((polygon, i) => (
                 <Drag key={i} width={width} height={height} resetOnStart>
-                  {({
-                    dragStart,
-                    dragEnd,
-                    dragMove,
-                    isDragging,
-                    x,
-                    y,
-                    dx,
-                    dy,
-                  }) => (
+                  {({ dragStart, dragEnd, dragMove, isDragging, dx, dy }) => (
                     <Group
                       key={i}
                       id={i.toString()}
-                      // transform={`translate(${dx}, ${dy})`}
                       onMouseDown={(e) => {
                         e.stopPropagation();
                         dragStart(e);
-                        setSelectedPolygon(polygon.coordinates);
-                        console.log("h");
                       }}
                       onMouseMove={(e) => {
                         if (isDragging) {
                           dragMove(e);
-                          handlePolygonDragMove(e, dx, dy);
-                          console.log(dx);
+                          handlePolygonDragMove(e, dx, dy, polygon.coordinates);
                         }
                       }}
                       onMouseUp={(e) => {
                         e.stopPropagation();
                         dragEnd(e);
-                        setSelectedPolygon([]);
+                        handlePolygonDragEnd(e, dx, dy, polygon.coordinates);
                       }}
                     >
-                      <LinePath
-                        data={
-                          polygon.coordinates
-                            ? [...polygon.coordinates, polygon.coordinates[0]]
-                            : []
-                        }
+                      <Polygon
+                        points={convertPoints(polygon.coordinates)}
                         style={{
                           cursor: "move",
                         }}
+                        fill="transparent"
                         stroke="red"
                         strokeWidth={3 / zoom.transformMatrix.scaleX}
-                        x={(d) => d.x}
-                        y={(d) => d.y}
                       />
                       {polygon.coordinates?.map((pt, i) => (
                         <Circle
@@ -267,6 +274,7 @@ export function VisxAnnotator(props: annotatorProps) {
                           }}
                         />
                       ))}
+                      <rect width={width} height={height} fill="transparent" />
                     </Group>
                   )}
                 </Drag>
