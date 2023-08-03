@@ -1,8 +1,9 @@
-import React, { RefObject, useState, useEffect } from "react";
+import React, { RefObject, useState } from "react";
 import { Dims, Point, PolygonData } from "../../types/annotatorTypes";
+import { convertPoints, isPointWithinImage } from "./utilities";
 import useImage from "use-image";
-
 import { KonvaEventObject } from "konva/lib/Node";
+import { PolygonDrawer } from "./konvaPolygon";
 import { Stage, Layer, Circle, Line, Image, Group } from "react-konva";
 import Konva from "konva";
 
@@ -34,7 +35,6 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   const [mousePos, setMousePos] = useState<Point>();
   const zoomBy = 1.05;
   const [image] = useImage(props.currImage);
-
   const layer = props.layerRef.current;
   const stage = props.stageRef.current;
   const polygonsData = props.polygonsData;
@@ -44,7 +44,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   function handleDrawPolylineClick() {
     if (layer && props.isDrawing) {
       const newPoint: Point = layer.getRelativePointerPosition();
-      if (!isClosingPolygon(newPoint)) {
+      if (!isClosingPolyline(newPoint)) {
         setPolylinePoints((prevPoints) => [...prevPoints, newPoint]);
       } else {
         props.stopDrawing();
@@ -58,7 +58,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   function handleMouseMove() {
     if (polylinePoints.length > 0 && layer) {
       const pointer = layer.getRelativePointerPosition();
-      if (!isClosingPolygon(pointer)) {
+      if (!isClosingPolyline(pointer)) {
         setMousePos(pointer);
       } else {
         const snap = polylinePoints[0];
@@ -75,6 +75,18 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       return [];
     }
   }
+
+  function isClosingPolyline(point: Point) {
+    if (polylinePoints.length >= 3) {
+      if (
+        Math.abs(polylinePoints[0].x - point.x) <= 7 / props.currZoom &&
+        Math.abs(polylinePoints[0].y - point.y) <= 7 / props.currZoom
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
   /* ********* POLYLINE DRAWING HANDLERS ABOVE ********* */
 
   /* ********* DRAGGING HANDLERS BELOW ********* */
@@ -84,7 +96,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
     const new_x = e.target.attrs.x;
     const new_y = e.target.attrs.y;
     let linePoints: Point[] = e.target.parent?.children![0].getAttr("points");
-    if (isPointWithinImage(new_x, new_y)) {
+    if (isPointWithinImage(new_x, new_y, image)) {
       linePoints[c_index * 2] = new_x;
       linePoints[c_index * 2 + 1] = new_y;
     } else {
@@ -112,7 +124,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
         return node.getClassName() === "Circle";
       });
       const circlesInImage = circles.every((circle) =>
-        isPointWithinImage(circle.attrs.x + dx, circle.attrs.y + dy)
+        isPointWithinImage(circle.attrs.x + dx, circle.attrs.y + dy, image)
       );
       if (circlesInImage) {
         let newPoints: Point[] = [];
@@ -169,39 +181,6 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
 
   /* ********* ZOOM AND PAN ABOVE ********* */
 
-  /* ********* UTILITY FUNCTIONS BELOW ********* */
-
-  function convertPoints(points: Point[]) {
-    const converted: number[] = [];
-    points.map((obj) => converted.push(obj.x, obj.y));
-    return converted;
-  }
-
-  function isClosingPolygon(point: Point) {
-    if (polylinePoints.length >= 3) {
-      if (
-        Math.abs(polylinePoints[0].x - point.x) <= 7 / props.currZoom &&
-        Math.abs(polylinePoints[0].y - point.y) <= 7 / props.currZoom
-      ) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  function isPointWithinImage(x: number, y: number) {
-    if (layer && image) {
-      if (x < image.width && x > 0 && y < image.height && y > 0) {
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      return false;
-    }
-  }
-  /* ********* UTILITY FUNCTIONS ABOVE ********* */
-
   /* ********* CUSTOM SHAPE COMPONENTS ********* */
 
   function Polyline() {
@@ -220,9 +199,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
         <Group
           id={i.toString()}
           draggable={props.circlesVisible[i] ? true : false}
-          onClick={(e) => {
-            props.onPolygonClicked(i);
-          }}
+          onClick={() => props.onPolygonClicked(i)}
           onDragEnd={handlePolygonDragEnd}
           onDragMove={handlePolygonDragMove}
           onContextMenu={handlePolygonDelete}
@@ -327,7 +304,21 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
           stroke="red"
         />
         {props.polygonsData?.map((polygon, i) => (
-          <Polygon key={i} points={polygon.coordinates as Point[]} i={i} />
+          // <Polygon key={i} i={i} points={polygon.coordinates!} />
+          <PolygonDrawer
+            key={i}
+            points={polygon.coordinates!}
+            i={i}
+            polygonsData={polygonsData}
+            stageRef={props.stageRef}
+            isDrawing={props.isDrawing}
+            circlesVisible={props.circlesVisible}
+            currZoom={props.currZoom}
+            image={image}
+            onPolygonChanged={props.onPolygonChanged}
+            onPolygonDeleted={props.onPolygonDeleted}
+            onPolygonClicked={props.onPolygonClicked}
+          />
         ))}
       </Layer>
     </Stage>

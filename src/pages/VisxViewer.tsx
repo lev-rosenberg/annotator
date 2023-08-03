@@ -13,6 +13,7 @@ import FormDialog from "../components/labelPopup";
 import { customJson } from "../components/toFromJson";
 import { ProvidedZoom, TransformMatrix } from "@visx/zoom/lib/types";
 import Chip from "@mui/material/Chip";
+import { convertImgDimsToSvgCoordinates } from "../components/visxDemo/utilities";
 
 export default function VisxViewer(): JSX.Element {
   const svgContainerRef = useRef<HTMLDivElement>(null);
@@ -23,7 +24,9 @@ export default function VisxViewer(): JSX.Element {
   const [polygonsData, setPolygonsData] = useState<PolygonData[]>([]);
   const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
-  const [isZooming, setIsZooming] = useState<boolean>(false);
+  const [isZoomingOrPanning, setIsZoomingOrPanning] = useState<boolean>(false);
+  const [polygonDragging, setPolygonDragging] = useState<boolean>(false);
+
   const [initialTransform, setInitialTransform] = useState<TransformMatrix>({
     scaleX: 0.15,
     scaleY: 0.15,
@@ -64,10 +67,12 @@ export default function VisxViewer(): JSX.Element {
     const img = new Image();
     img.onload = function () {
       const jsonData = customJson(num, img.naturalWidth, img.naturalHeight);
-      // labelsToCoords();
       setImgDimensions({ width: img.width, height: img.height });
       setPolygonsData(jsonData);
       // handleCirclesNotVisible();
+
+      assignLabelCoords();
+
       setCurrImage(image);
       handleZoomToFit(img.naturalWidth, img.naturalHeight);
     };
@@ -81,7 +86,6 @@ export default function VisxViewer(): JSX.Element {
     if (dims) {
       const scale =
         dims.width < imgWidth ? dims.width / imgWidth : dims.height / imgHeight;
-      assignLabelCoords();
       return {
         scaleX: scale,
         scaleY: scale,
@@ -120,23 +124,19 @@ export default function VisxViewer(): JSX.Element {
 
   const getLabelCoords = useCallback(
     (polygon: Point[]) => {
-      const dims = document
-        .querySelector("#container")
-        ?.getBoundingClientRect();
-
-      if (dims && imageX && imageY) {
-        const bottomRightPoint: Point | null =
-          findBottomRightCoordinate(polygon);
-        console.log(dims);
+      const offsetX = svgContainerRef.current?.offsetLeft;
+      const offsetY = svgContainerRef.current?.offsetTop;
+      if (offsetX && offsetY && imageX && imageY) {
+        let bottomRightPoint: Point = findBottomRightCoordinate(polygon);
         return {
           x:
             bottomRightPoint.x * currZoom +
-            dims.left +
+            offsetX +
             parseFloat(imageX) +
             10 * currZoom,
           y:
             bottomRightPoint.y * currZoom +
-            dims.top +
+            offsetY +
             parseFloat(imageY) +
             10 * currZoom,
         };
@@ -144,21 +144,22 @@ export default function VisxViewer(): JSX.Element {
         return null;
       }
     },
-    [currZoom]
+    [currZoom, imageX, imageY]
   );
   const assignLabelCoords = useCallback(() => {
     setPolygonsData((prevPolygonsData) => {
       const polygons: PolygonData[] = [];
-      prevPolygonsData.forEach((polygon, i) => {
+      prevPolygonsData.forEach((polygon) => {
         if (polygon.coordinates) {
           polygon.label.coords = getLabelCoords(polygon.coordinates);
-          polygon.label.visible = true;
+          polygon.label.visible =
+            isZoomingOrPanning || polygonDragging ? false : true;
           polygons.push(polygon);
         }
       });
       return polygons;
     });
-  }, [getLabelCoords]);
+  }, [getLabelCoords, isZoomingOrPanning, polygonDragging]);
 
   useEffect(() => {
     assignLabelCoords();
@@ -167,8 +168,8 @@ export default function VisxViewer(): JSX.Element {
   function handleLabelSelect(option: string) {
     const newLabel = {
       name: option,
-      coords: getLabelCoords(draftPolygon as Point[]),
-      visible: null,
+      coords: getLabelCoords(draftPolygon!),
+      visible: true,
     };
     setPolygonsData((prevData) => [
       ...prevData,
@@ -180,29 +181,35 @@ export default function VisxViewer(): JSX.Element {
 
   function findBottomRightCoordinate(coordinates: Point[]): Point {
     let currCoord: Point = coordinates[0];
-
-    for (const coord of coordinates) {
+    coordinates.map((coord) => {
       if (coord.y > currCoord.y) {
         currCoord = coord;
       }
-    }
+    });
     return currCoord;
   }
 
-  // function isLabelChipVisible(x: number, y: number) {
-  //   if (
-  //     x < stage?.attrs.container.offsetLeft + stage?.attrs.width &&
-  //     x > stage?.attrs.container.offsetLeft &&
-  //     y < stage?.attrs.container.offsetTop + stage?.attrs.height &&
-  //     y > stage?.attrs.container.offsetTop
-  //   ) {
-  //     if (!isDraggingLayer) {
-  //       return true;
-  //     }
-  //   } else {
-  //     return false;
-  //   }
-  // }
+  function isLabelChipVisible(x: number, y: number) {
+    const offsetX = svgContainerRef.current?.offsetLeft;
+    const offsetY = svgContainerRef.current?.offsetTop;
+    const offsetWidth = svgContainerRef.current?.offsetWidth;
+    const offsetHeight = svgContainerRef.current?.offsetHeight;
+
+    if (offsetX && offsetY && offsetHeight && offsetWidth) {
+      if (
+        x < offsetX + offsetWidth &&
+        x > offsetX &&
+        y < offsetY + offsetHeight &&
+        y > offsetY &&
+        !isZoomingOrPanning &&
+        !polygonDragging
+      ) {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  }
 
   /* ****** LABEL SELECTION AND UPDATING ABOVE ****** */
 
@@ -259,8 +266,11 @@ export default function VisxViewer(): JSX.Element {
             handlePolygonChanged(index, points)
           }
           onPolygonDeleted={(index: number) => handlePolygonDelete(index)}
+          onZoomPan={(bool: boolean) => setIsZoomingOrPanning(bool)}
           initialTransform={initialTransform}
           handleZoomToFit={handleZoomToFit}
+          polygonDragging={polygonDragging}
+          onPolygonDrag={(bool) => setPolygonDragging(bool)}
         />
         <FormDialog
           dialogueOpen={draftPolygon != null}
@@ -281,7 +291,12 @@ export default function VisxViewer(): JSX.Element {
                     position: "absolute",
                     top: `${polygon.label.coords?.y}px`,
                     left: `${polygon.label.coords?.x}px`,
-                    display: "flex",
+                    display: isLabelChipVisible(
+                      polygon.label.coords.x,
+                      polygon.label.coords.y
+                    )
+                      ? "flex"
+                      : "none",
                   }}
                 />
               );
@@ -289,12 +304,11 @@ export default function VisxViewer(): JSX.Element {
           })}
         </div>
       )}
-      <div className="footerRow">
+      <div className="footerRow" style={{ marginTop: "5vh" }}>
         <div>Current Zoom: {Math.round(currZoom * 100)}%</div>
-        <div>
-          <button className="reset">Fit to container</button>
-          <button className="fullsize">Zoom to 100%</button>
-        </div>
+        <button onClick={() => setViewLabels(!viewLabels)}>
+          {viewLabels ? "Hide Labels" : "View Labels"}
+        </button>
       </div>
       <ul className={styles.li}>
         {polygonsData.map((polygon, i) => (

@@ -1,4 +1,4 @@
-import React, { useRef, RefObject, useEffect, useState, Dispatch } from "react";
+import React, { useRef, RefObject, useState, Dispatch } from "react";
 import { localPoint } from "@visx/event";
 import { Zoom } from "@visx/zoom";
 import { Group } from "@visx/group";
@@ -21,7 +21,10 @@ interface annotatorProps {
   currZoom: number;
   polygonsData: PolygonData[];
   isDrawing: boolean;
+  polygonDragging: boolean;
+  onPolygonDrag: (bool: boolean) => void;
   initialTransform: TransformMatrix;
+  onZoomPan: (bool: boolean) => void;
   setCurrZoom: Dispatch<number>;
   onPolygonAdded: (points: Point[]) => void;
   onPolygonChanged: (index: number, points: Point[]) => void;
@@ -35,15 +38,14 @@ export function VisxAnnotator(props: annotatorProps) {
 
   const imgRef = useRef<SVGImageElement | null>(null);
   const groupRef = props.groupRef;
-  const [polygonDragging, setPolygonDragging] = useState<boolean>(false);
 
-  const width = props.divDimensions ? props.divDimensions.width! : 100;
-  const height = props.divDimensions ? props.divDimensions.height! : 100;
+  const containerWidth = props.divDimensions?.width;
+  const containerHeight = props.divDimensions?.height;
 
   const scale =
-    width < props.imgOriginalDims?.width!
-      ? width / props.imgOriginalDims?.width!
-      : height / props.imgOriginalDims?.height!;
+    containerWidth! < props.imgOriginalDims?.width!
+      ? containerWidth! / props.imgOriginalDims?.width!
+      : containerHeight! / props.imgOriginalDims?.height!;
 
   /* ********* POLYLINE DRAWING FUNCTIONS BELOW ********* */
 
@@ -82,7 +84,6 @@ export function VisxAnnotator(props: annotatorProps) {
   }
 
   function handleMouseMove(e: React.MouseEvent<SVGElement, MouseEvent>) {
-    // if (polylinePoints.length > 0) {
     const pointer = localPoint(e);
     if (pointer && !isClosingPolygon(pointer)) {
       setMousePos(pointer);
@@ -90,7 +91,6 @@ export function VisxAnnotator(props: annotatorProps) {
       const snap = convertImgDimsToSvgCoordinates(polylinePoints[0], groupRef);
       setMousePos(snap);
     }
-    // }
   }
 
   /* ********* POLYLINE DRAWING FUNCTIONS ABOVE ********* */
@@ -98,10 +98,10 @@ export function VisxAnnotator(props: annotatorProps) {
   /* ********* ZOOMING FUNCTIONS BELOW ********* */
 
   function zoom100(zoom: ProvidedZoom<SVGSVGElement> & any) {
-    if (width && height) {
+    if (containerWidth && containerHeight) {
       const center = {
-        x: width / 2,
-        y: height / 2,
+        x: containerWidth / 2,
+        y: containerHeight / 2,
       };
       const relatedTo = {
         x:
@@ -128,21 +128,27 @@ export function VisxAnnotator(props: annotatorProps) {
 
   return (
     <Zoom<SVGSVGElement>
-      width={width}
-      height={height}
+      width={containerWidth ? containerWidth : 100}
+      height={containerHeight ? containerHeight : 100}
       initialTransformMatrix={props.initialTransform}
       scaleXMin={1 / 20}
       scaleXMax={10}
       scaleYMin={1 / 20}
       scaleYMax={10}
+      // wheelDelta={(e) => {
+      //   console.log(Math.sign(e.deltaY) * 1.05);
+      //   return {
+      //     scaleX: Math.sign(e.deltaY) * 1.05
+      //   };
+      // }}
     >
       {(zoom) => (
         <>
           <svg
             className={styles.svg}
-            width={width}
-            height={height}
-            ref={!polygonDragging ? zoom.containerRef : null}
+            width={containerWidth}
+            height={containerHeight}
+            ref={!props.polygonDragging ? zoom.containerRef : null}
             style={{
               cursor: zoom.isDragging ? "grabbing" : "grab",
               touchAction: "none",
@@ -150,9 +156,15 @@ export function VisxAnnotator(props: annotatorProps) {
             onWheel={(e) => {
               props.setCurrZoom(zoom.transformMatrix.scaleX);
             }}
+            onMouseDown={() => {
+              if (!props.isDrawing) {
+                props.onZoomPan(true);
+              }
+            }}
             onMouseMove={(e) => {
               handleMouseMove(e);
             }}
+            onMouseUp={(e) => props.onZoomPan(false)}
           >
             <Group
               transform={zoom.toString()}
@@ -192,16 +204,16 @@ export function VisxAnnotator(props: annotatorProps) {
                   <PolygonDrawer
                     i={i}
                     key={i}
-                    width={width}
-                    height={height}
+                    width={containerWidth ? containerWidth : 100}
+                    height={containerHeight ? containerHeight : 100}
                     zoom={zoom}
                     imgOriginalDims={props.imgOriginalDims}
                     polygon={polygon}
                     onPolygonChanged={props.onPolygonChanged}
                     onPolygonDeleted={props.onPolygonDeleted}
-                    polygonDragging={polygonDragging}
-                    onPolygonDrag={(bool) => setPolygonDragging(bool)}
                     groupRef={groupRef}
+                    polygonDragging={props.polygonDragging}
+                    onPolygonDrag={(bool) => props.onPolygonDrag(bool)}
                   />
                 ))}
               </>
