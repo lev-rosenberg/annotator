@@ -50,7 +50,6 @@ export function PolylineDrawer (props: polylineProps) {
     /* Adds new point to polyline if newVertex is not closing the polygon. 
     Otherwise sets the polygonsData array to hold the points of the polyline.
     And then rests the polylinePoints array to empty in order to begin a new polyline. */
-    console.log("hi")
     const [offsetX, offsetY] = d3.pointer(event, props.svgElement.current);
     const [x, y] = getProportionalCoordsToSvg(offsetX, offsetY, props.svgElement);
     const newVertex: Point = { x: x, y: y };

@@ -36,7 +36,6 @@ export function PolygonsDrawer (props: polygonsProps) {
   });
 
   function handlePolygonDrag(polygon: Element, e: d3.D3DragEvent<SVGCircleElement, SVGSVGElement, SVGSVGElement>) {
-    console.log(e)
     const polygonGroup = d3.select(polygon.parentElement);
     const circles = polygonGroup.selectAll("circle");
     const polygonSvg = polygonGroup.selectAll("polygon");

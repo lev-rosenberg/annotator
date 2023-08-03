@@ -35,7 +35,6 @@ export function convertSvgCoordinatesToImgDims(svgCoords: Point, groupRef: RefOb
   */
 
   const zoom = parseFloat(groupRef.current?.getAttribute("scale")!);
-  console.log(zoom)
   const x = parseFloat(groupRef.current?.getAttribute("x")!);
   const y = parseFloat(groupRef.current?.getAttribute("y")!);
   const imgDims = {

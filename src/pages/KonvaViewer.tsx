@@ -213,7 +213,6 @@ export default function KonvaViewer(): JSX.Element {
   /* ****** POLYGON DATA UPDATING BELOW ****** */
 
   function handleCirclesNotVisible() {
-    console.log("hre");
     setCirclesVisible((prevCirclesVisible) => {
       const newData = Array(prevCirclesVisible.length).fill(false);
       return newData;
@@ -354,7 +353,7 @@ export default function KonvaViewer(): JSX.Element {
                       imgDimensions?.width!,
                       imgDimensions?.height!
                     )
-                  : console.log("nope")
+                  : null
               }
             >
               Fit to container

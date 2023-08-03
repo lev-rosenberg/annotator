@@ -1,12 +1,20 @@
-import React, { useRef, useEffect, useCallback, useState } from "react";
+import React, {
+  useRef,
+  useEffect,
+  useCallback,
+  useState,
+  RefObject,
+} from "react";
 import Link from "next/link";
 import { VisxAnnotator } from "../components/visxDemo/visxAnnotator";
 import styles from "../styles/svgAnnotator.module.css";
 import { Dims, Point, PolygonData } from "../types/annotatorTypes";
 import FormDialog from "../components/labelPopup";
 import { customJson } from "../components/toFromJson";
+import { ProvidedZoom, TransformMatrix } from "@visx/zoom/lib/types";
+import Chip from "@mui/material/Chip";
 
-export default function D3Viewer(): JSX.Element {
+export default function VisxViewer(): JSX.Element {
   const svgContainerRef = useRef<HTMLDivElement>(null);
   const [divDimensions, setDivDimensions] = useState<Dims | undefined>();
   const [imgDimensions, setImgDimensions] = useState<Dims | undefined>();
@@ -15,13 +23,26 @@ export default function D3Viewer(): JSX.Element {
   const [polygonsData, setPolygonsData] = useState<PolygonData[]>([]);
   const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
-
+  const [isZooming, setIsZooming] = useState<boolean>(false);
+  const [initialTransform, setInitialTransform] = useState<TransformMatrix>({
+    scaleX: 0.15,
+    scaleY: 0.15,
+    translateX: 0,
+    translateY: 0,
+    skewX: 0,
+    skewY: 0,
+  });
+  const groupRef = useRef<SVGSVGElement | null>(null);
+  const [viewLabels, setViewLabels] = useState<boolean>(true);
+  const imageX = groupRef.current?.getAttribute("x");
+  const imageY = groupRef.current?.getAttribute("y");
   /* ****** IMAGE LOADING BELOW ****** */
 
   useEffect(() => {
     const img = new Image();
     img.onload = function () {
       setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+      handleZoomToFit(img.naturalWidth, img.naturalHeight);
     };
     img.src = "/images/maddoxdev.jpg";
     handleResize();
@@ -30,9 +51,10 @@ export default function D3Viewer(): JSX.Element {
   }, []);
 
   function handleResize() {
+    const dims = document.querySelector("#container")?.getBoundingClientRect();
     setDivDimensions({
-      width: svgContainerRef.current?.clientWidth,
-      height: svgContainerRef.current?.clientHeight,
+      width: dims?.width,
+      height: dims?.height,
     });
   }
 
@@ -42,33 +64,38 @@ export default function D3Viewer(): JSX.Element {
     const img = new Image();
     img.onload = function () {
       const jsonData = customJson(num, img.naturalWidth, img.naturalHeight);
-      // handleZoomFitContainer(img.width, img.height);
       // labelsToCoords();
       setImgDimensions({ width: img.width, height: img.height });
       setPolygonsData(jsonData);
       // handleCirclesNotVisible();
       setCurrImage(image);
+      handleZoomToFit(img.naturalWidth, img.naturalHeight);
     };
     img.src = image;
     setIsDrawing(false);
     //
   }
 
-  /* ****** POLYGON DATA UPDATING BELOW ****** */
-
-  function handleLabelSelect(option: string) {
-    const newLabel = {
-      name: option,
-      coords: null,
-      visible: null,
-    };
-    setPolygonsData((prevData) => [
-      ...prevData,
-      { coordinates: draftPolygon, label: newLabel },
-    ]);
-    setDraftPolygon(null);
-    setIsDrawing(false);
+  function handleZoomToFit(imgWidth: number, imgHeight: number) {
+    const dims = document.querySelector("#container")?.getBoundingClientRect();
+    if (dims) {
+      const scale =
+        dims.width < imgWidth ? dims.width / imgWidth : dims.height / imgHeight;
+      assignLabelCoords();
+      return {
+        scaleX: scale,
+        scaleY: scale,
+        translateX:
+          dims.height < imgHeight ? (dims.width - imgWidth * scale) / 2 : 0,
+        translateY:
+          dims.width < imgWidth ? (dims.height - imgHeight * scale) / 2 : 0,
+        skewX: 0,
+        skewY: 0,
+      };
+    }
   }
+
+  /* ****** POLYGON DATA UPDATING BELOW ****** */
 
   function handlePolygonChanged(index: number, points: Point[]) {
     setPolygonsData((prevPolygonsData) => {
@@ -88,6 +115,96 @@ export default function D3Viewer(): JSX.Element {
   }
 
   /* ****** POLYGON DATA UPDATING ABOVE ****** */
+
+  /* ****** LABEL SELECTION AND UPDATING BELOW ****** */
+
+  const getLabelCoords = useCallback(
+    (polygon: Point[]) => {
+      const dims = document
+        .querySelector("#container")
+        ?.getBoundingClientRect();
+
+      if (dims && imageX && imageY) {
+        const bottomRightPoint: Point | null =
+          findBottomRightCoordinate(polygon);
+        console.log(dims);
+        return {
+          x:
+            bottomRightPoint.x * currZoom +
+            dims.left +
+            parseFloat(imageX) +
+            10 * currZoom,
+          y:
+            bottomRightPoint.y * currZoom +
+            dims.top +
+            parseFloat(imageY) +
+            10 * currZoom,
+        };
+      } else {
+        return null;
+      }
+    },
+    [currZoom]
+  );
+  const assignLabelCoords = useCallback(() => {
+    setPolygonsData((prevPolygonsData) => {
+      const polygons: PolygonData[] = [];
+      prevPolygonsData.forEach((polygon, i) => {
+        if (polygon.coordinates) {
+          polygon.label.coords = getLabelCoords(polygon.coordinates);
+          polygon.label.visible = true;
+          polygons.push(polygon);
+        }
+      });
+      return polygons;
+    });
+  }, [getLabelCoords]);
+
+  useEffect(() => {
+    assignLabelCoords();
+  }, [assignLabelCoords]);
+
+  function handleLabelSelect(option: string) {
+    const newLabel = {
+      name: option,
+      coords: getLabelCoords(draftPolygon as Point[]),
+      visible: null,
+    };
+    setPolygonsData((prevData) => [
+      ...prevData,
+      { coordinates: draftPolygon, label: newLabel },
+    ]);
+    setDraftPolygon(null);
+    setIsDrawing(false);
+  }
+
+  function findBottomRightCoordinate(coordinates: Point[]): Point {
+    let currCoord: Point = coordinates[0];
+
+    for (const coord of coordinates) {
+      if (coord.y > currCoord.y) {
+        currCoord = coord;
+      }
+    }
+    return currCoord;
+  }
+
+  // function isLabelChipVisible(x: number, y: number) {
+  //   if (
+  //     x < stage?.attrs.container.offsetLeft + stage?.attrs.width &&
+  //     x > stage?.attrs.container.offsetLeft &&
+  //     y < stage?.attrs.container.offsetTop + stage?.attrs.height &&
+  //     y > stage?.attrs.container.offsetTop
+  //   ) {
+  //     if (!isDraggingLayer) {
+  //       return true;
+  //     }
+  //   } else {
+  //     return false;
+  //   }
+  // }
+
+  /* ****** LABEL SELECTION AND UPDATING ABOVE ****** */
 
   return (
     <div>
@@ -126,8 +243,10 @@ export default function D3Viewer(): JSX.Element {
           </button>
         </div>
       </div>
+
       <div id="container" className={styles.container} ref={svgContainerRef}>
         <VisxAnnotator
+          groupRef={groupRef}
           currImage={currImage}
           divDimensions={divDimensions}
           imgOriginalDims={imgDimensions}
@@ -140,12 +259,36 @@ export default function D3Viewer(): JSX.Element {
             handlePolygonChanged(index, points)
           }
           onPolygonDeleted={(index: number) => handlePolygonDelete(index)}
+          initialTransform={initialTransform}
+          handleZoomToFit={handleZoomToFit}
         />
         <FormDialog
           dialogueOpen={draftPolygon != null}
           onLabelSelect={handleLabelSelect}
         />
       </div>
+      {viewLabels && (
+        <div className="chips">
+          {polygonsData.map((polygon, i) => {
+            if (polygon.label.coords) {
+              return (
+                <Chip
+                  label={polygon.label.name}
+                  color="primary"
+                  size="small"
+                  key={i}
+                  sx={{
+                    position: "absolute",
+                    top: `${polygon.label.coords?.y}px`,
+                    left: `${polygon.label.coords?.x}px`,
+                    display: "flex",
+                  }}
+                />
+              );
+            }
+          })}
+        </div>
+      )}
       <div className="footerRow">
         <div>Current Zoom: {Math.round(currZoom * 100)}%</div>
         <div>
