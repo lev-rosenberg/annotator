@@ -1,4 +1,4 @@
-import React, { useRef, RefObject, useState, Dispatch } from "react";
+import React, { useRef, RefObject, useState, useEffect, Dispatch } from "react";
 import { localPoint } from "@visx/event";
 import { Zoom } from "@visx/zoom";
 import { Group } from "@visx/group";
@@ -12,27 +12,28 @@ import { ProvidedZoom, TransformMatrix } from "@visx/zoom/lib/types";
 import { PolylineDrawer } from "./visxPolyline";
 import { Point, PolygonData, Dims } from "../../types/annotatorTypes";
 import styles from "../../styles/svgAnnotator.module.css";
+import { initialize } from "next/dist/server/lib/render-server";
 
 interface annotatorProps {
   groupRef: RefObject<SVGSVGElement>;
   currImage: string;
   divDimensions: Dims | undefined;
-  imgOriginalDims: Dims | undefined;
+  imgDimensions: Dims | undefined;
   currZoom: number;
   polygonsData: PolygonData[];
   isDrawing: boolean;
   polygonDragging: boolean;
   onPolygonDrag: (bool: boolean) => void;
-  initialTransform: TransformMatrix;
   onZoomPan: (bool: boolean) => void;
   setCurrZoom: Dispatch<number>;
   onPolygonAdded: (points: Point[]) => void;
   onPolygonChanged: (index: number, points: Point[]) => void;
   onPolygonDeleted: (index: number) => void;
-  handleZoomToFit: (width: number, height: number) => TransformMatrix | void;
+  zoom: ProvidedZoom<SVGSVGElement> & any;
+  fitOnLoad: (width: number, height: number) => void;
 }
 
-export function VisxAnnotator(props: annotatorProps) {
+export default function VisxAnnotator(props: annotatorProps) {
   const [polylinePoints, setPolylinePoints] = useState<Point[]>([]);
   const [mousePos, setMousePos] = useState<Point>();
 
@@ -41,13 +42,27 @@ export function VisxAnnotator(props: annotatorProps) {
 
   const containerWidth = props.divDimensions?.width;
   const containerHeight = props.divDimensions?.height;
+  const imgWidth = props.imgDimensions?.width;
+  const imgHeight = props.imgDimensions?.height;
 
-  const scale =
-    containerWidth! < props.imgOriginalDims?.width!
-      ? containerWidth! / props.imgOriginalDims?.width!
-      : containerHeight! / props.imgOriginalDims?.height!;
+  const zoom = props.zoom;
 
   /* ********* POLYLINE DRAWING FUNCTIONS BELOW ********* */
+
+  useEffect(() => {
+    const onPageLoad = () => {
+      props.fitOnLoad(imgWidth!, imgHeight!);
+    };
+
+    // Check if the page has already loaded
+    if (document.readyState === "complete") {
+      onPageLoad();
+    } else {
+      window.addEventListener("load", onPageLoad);
+      // Remove the event listener when component unmounts
+      return () => window.removeEventListener("load", onPageLoad);
+    }
+  }, []);
 
   function handleDrawPolylineOnClick(
     e: React.MouseEvent<SVGElement, MouseEvent>
@@ -95,148 +110,79 @@ export function VisxAnnotator(props: annotatorProps) {
 
   /* ********* POLYLINE DRAWING FUNCTIONS ABOVE ********* */
 
-  /* ********* ZOOMING FUNCTIONS BELOW ********* */
-
-  function zoom100(zoom: ProvidedZoom<SVGSVGElement> & any) {
-    if (containerWidth && containerHeight) {
-      const center = {
-        x: containerWidth / 2,
-        y: containerHeight / 2,
-      };
-      const relatedTo = {
-        x:
-          (center.x - zoom.transformMatrix.translateX) /
-          zoom.transformMatrix.scaleX,
-        y:
-          (center.y - zoom.transformMatrix.translateY) /
-          zoom.transformMatrix.scaleY,
-      };
-      const transformMatrix = {
-        scaleX: 1,
-        scaleY: 1,
-        translateX: center.x - relatedTo.x,
-        translateY: center.y - relatedTo.y,
-        skewX: 0,
-        skewY: 0,
-      };
-      zoom.setTransformMatrix(transformMatrix);
-      props.setCurrZoom(1);
-    }
-  }
-
-  /* ********* ZOOMING FUNCTIONS ABOVE ********* */
-
   return (
-    <Zoom<SVGSVGElement>
-      width={containerWidth ? containerWidth : 100}
-      height={containerHeight ? containerHeight : 100}
-      initialTransformMatrix={props.initialTransform}
-      scaleXMin={1 / 20}
-      scaleXMax={10}
-      scaleYMin={1 / 20}
-      scaleYMax={10}
-      // wheelDelta={(e) => {
-      //   console.log(Math.sign(e.deltaY) * 1.05);
-      //   return {
-      //     scaleX: Math.sign(e.deltaY) * 1.05
-      //   };
-      // }}
-    >
-      {(zoom) => (
-        <>
-          <svg
-            className={styles.svg}
-            width={containerWidth}
-            height={containerHeight}
-            ref={!props.polygonDragging ? zoom.containerRef : null}
-            style={{
-              cursor: zoom.isDragging ? "grabbing" : "grab",
-              touchAction: "none",
-            }}
-            onWheel={(e) => {
-              props.setCurrZoom(zoom.transformMatrix.scaleX);
-            }}
-            onMouseDown={() => {
-              if (!props.isDrawing) {
-                props.onZoomPan(true);
-              }
-            }}
-            onMouseMove={(e) => {
-              handleMouseMove(e);
-            }}
-            onMouseUp={(e) => props.onZoomPan(false)}
-          >
-            <Group
-              transform={zoom.toString()}
-              innerRef={groupRef}
-              x={zoom.transformMatrix.translateX}
-              y={zoom.transformMatrix.translateY}
-              scale={zoom.transformMatrix.scaleX}
-              style={{
-                cursor: props.isDrawing
-                  ? "crosshair"
-                  : zoom.isDragging
-                  ? "grabbing"
-                  : "grab",
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!zoom.isDragging && props.isDrawing) {
-                  handleDrawPolylineOnClick(e);
-                }
-              }}
-            >
-              <>
-                <image
-                  className={styles.img}
-                  href={props.currImage}
-                  ref={imgRef}
-                />
-                {polylinePoints.length && (
-                  <PolylineDrawer
-                    groupRef={groupRef}
-                    polylinePoints={polylinePoints}
-                    mousePos={mousePos}
-                    zoom={zoom}
-                  />
-                )}
-                {props.polygonsData.map((polygon, i) => (
-                  <PolygonDrawer
-                    i={i}
-                    key={i}
-                    width={containerWidth ? containerWidth : 100}
-                    height={containerHeight ? containerHeight : 100}
-                    zoom={zoom}
-                    imgOriginalDims={props.imgOriginalDims}
-                    polygon={polygon}
-                    onPolygonChanged={props.onPolygonChanged}
-                    onPolygonDeleted={props.onPolygonDeleted}
-                    groupRef={groupRef}
-                    polygonDragging={props.polygonDragging}
-                    onPolygonDrag={(bool) => props.onPolygonDrag(bool)}
-                  />
-                ))}
-              </>
-            </Group>
-          </svg>
-          <div>
-            <button
-              onClick={() => {
-                zoom.setTransformMatrix(
-                  props.handleZoomToFit(
-                    props.imgOriginalDims?.width!,
-                    props.imgOriginalDims?.height!
-                  )!
-                );
-                props.setCurrZoom(scale);
-              }}
-            >
-              Fit to container
-            </button>
-            <button onClick={() => zoom100(zoom)}>Zoom to 100%</button>
-          </div>
-        </>
-      )}
-    </Zoom>
+    <>
+      <svg
+        className={styles.svg}
+        width={containerWidth}
+        height={containerHeight}
+        ref={!props.polygonDragging ? zoom.containerRef : null}
+        style={{
+          cursor: zoom.isDragging ? "grabbing" : "grab",
+          touchAction: "none",
+        }}
+        onWheel={(e) => {
+          props.setCurrZoom(zoom.transformMatrix.scaleX);
+        }}
+        onMouseDown={() => {
+          if (!props.isDrawing) {
+            props.onZoomPan(true);
+          }
+        }}
+        onMouseMove={(e) => {
+          handleMouseMove(e);
+        }}
+        onMouseUp={(e) => props.onZoomPan(false)}
+      >
+        <Group
+          transform={zoom.toString()}
+          innerRef={groupRef}
+          x={zoom.transformMatrix.translateX}
+          y={zoom.transformMatrix.translateY}
+          scale={zoom.transformMatrix.scaleX}
+          style={{
+            cursor: props.isDrawing
+              ? "crosshair"
+              : zoom.isDragging
+              ? "grabbing"
+              : "grab",
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!zoom.isDragging && props.isDrawing) {
+              handleDrawPolylineOnClick(e);
+            }
+          }}
+        >
+          <>
+            <image className={styles.img} href={props.currImage} ref={imgRef} />
+            {polylinePoints.length && (
+              <PolylineDrawer
+                groupRef={groupRef}
+                polylinePoints={polylinePoints}
+                mousePos={mousePos}
+                zoom={zoom}
+              />
+            )}
+            {props.polygonsData.map((polygon, i) => (
+              <PolygonDrawer
+                i={i}
+                key={i}
+                width={containerWidth ? containerWidth : 100}
+                height={containerHeight ? containerHeight : 100}
+                zoom={zoom}
+                imgOriginalDims={props.imgDimensions}
+                polygon={polygon}
+                onPolygonChanged={props.onPolygonChanged}
+                onPolygonDeleted={props.onPolygonDeleted}
+                groupRef={groupRef}
+                polygonDragging={props.polygonDragging}
+                onPolygonDrag={(bool) => props.onPolygonDrag(bool)}
+              />
+            ))}
+          </>
+        </Group>
+      </svg>
+    </>
   );
 }

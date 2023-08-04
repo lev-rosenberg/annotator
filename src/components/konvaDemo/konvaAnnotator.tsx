@@ -187,7 +187,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
     return (
       <Line
         points={convertPoints(polylinePoints)}
-        strokeWidth={2 / props.currZoom}
+        strokeWidth={1 / props.currZoom}
         stroke="red"
       />
     );
@@ -276,7 +276,11 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
             props.draggingImage(true);
           }
         }}
-        onDragEnd={(e) => props.draggingImage(false)}
+        onDragEnd={(e) => {
+          if (e.target.getClassName() == "Layer") {
+            props.draggingImage(false);
+          }
+        }}
         onMouseEnter={() => {
           stage!.container().style.cursor = props.isDrawing
             ? "crosshair"
@@ -304,21 +308,23 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
           stroke="red"
         />
         {props.polygonsData?.map((polygon, i) => (
-          // <Polygon key={i} i={i} points={polygon.coordinates!} />
-          <PolygonDrawer
-            key={i}
-            points={polygon.coordinates!}
-            i={i}
-            polygonsData={polygonsData}
-            stageRef={props.stageRef}
-            isDrawing={props.isDrawing}
-            circlesVisible={props.circlesVisible}
-            currZoom={props.currZoom}
-            image={image}
-            onPolygonChanged={props.onPolygonChanged}
-            onPolygonDeleted={props.onPolygonDeleted}
-            onPolygonClicked={props.onPolygonClicked}
-          />
+          <>
+            {/* <PolygonDrawer
+              key={i}
+              points={polygon.coordinates!}
+              i={i}
+              polygonsData={polygonsData}
+              stageRef={props.stageRef}
+              isDrawing={props.isDrawing}
+              circlesVisible={props.circlesVisible}
+              currZoom={props.currZoom}
+              image={image}
+              onPolygonChanged={props.onPolygonChanged}
+              onPolygonDeleted={props.onPolygonDeleted}
+              onPolygonClicked={props.onPolygonClicked}
+            /> */}
+            <Polygon key={i + 1} i={i} points={polygon.coordinates!} />
+          </>
         ))}
       </Layer>
     </Stage>

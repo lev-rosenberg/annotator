@@ -99,9 +99,12 @@ export function PolylineDrawer (props: polylineProps) {
             .attr("id", "drawing-polyline")
             .attr("stroke", "red")
             .attr("fill", "none")
-            .attr("stroke-width", (2 * scale) / t.k)
+            
             .attr("points", (d) => convertPoints(d)),
-        (update) => update.attr("points", (d) => convertPoints(d)),
+        (update) => 
+          update
+          .attr("points", (d) => convertPoints(d))
+          .attr("stroke-width", (1 * scale) / t.k),
         (exit) => exit.remove(),
       )
       .attr("transform", t.toString());

@@ -114,7 +114,7 @@ export function PolygonsDrawer (props: polygonsProps) {
             .append("polygon")
             .attr("class", styles.polygon)
             .attr("stroke", "red")
-            .attr("stroke-width", (2 * scale) / t.k)
+            .attr("stroke-width", (1 * scale) / t.k)
             .attr("fill", "none")
             .attr("points", (d) => convertPoints(d.coordinates as Point[]));
           return polygon;
@@ -131,7 +131,7 @@ export function PolygonsDrawer (props: polygonsProps) {
 
           update
             .select("polygon")
-            .attr("stroke-width", (2 * scale) / t.k)
+            .attr("stroke-width", (1 * scale) / t.k)
             .attr("points", (d) => convertPoints(d.coordinates as Point[])); // Update the points attribute of the polygon
           return update;
         },

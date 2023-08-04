@@ -31,13 +31,13 @@ export function PolylineDrawer(props: annotatorProps) {
       <Line // this is the line from the end of the polyline to my mouse as you draw
         from={props.polylinePoints.at(-1)}
         to={polylineToMouse()[1]}
-        strokeWidth={2 / props.zoom.transformMatrix.scaleX}
+        strokeWidth={1 / props.zoom.transformMatrix.scaleX}
         stroke="red"
       />
       <LinePath
         data={props.polylinePoints}
         stroke="red"
-        strokeWidth={2 / props.zoom.transformMatrix.scaleX}
+        strokeWidth={1 / props.zoom.transformMatrix.scaleX}
         x={(d) => d.x}
         y={(d) => d.y}
       />

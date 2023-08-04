@@ -53,8 +53,8 @@ export function D3ZoomPan(props: annotatorProps) {
 
     // keep all the circle radii and line widths proportionate to the zooming scale (e.transform.k)
     d3.selectAll("circle").attr("r", (7 * scale) / t.k);
-    d3.selectAll("polygon").attr("stroke-width", (2 * scale) / t.k);
-    d3.selectAll("polyline").attr("stroke-width", (2 * scale) / t.k);
+    d3.selectAll("polygon").attr("stroke-width", (1 * scale) / t.k);
+    d3.selectAll("polyline").attr("stroke-width", (1 * scale) / t.k);
   }
 
   /* ********** UTILITY FUNCTIONS ********** */

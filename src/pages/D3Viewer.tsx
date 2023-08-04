@@ -8,7 +8,8 @@ import { PolygonsDrawer } from "../components/d3demo/d3Polygons";
 import FormDialog from "../components/labelPopup";
 import styles from "../styles/svgAnnotator.module.css";
 import * as d3 from "d3";
-import { Dims, LabelData, Point, PolygonData } from "../types/annotatorTypes";
+import { Dims, Point, PolygonData } from "../types/annotatorTypes";
+import Chip from "@mui/material/Chip";
 
 export default function D3Viewer(): JSX.Element {
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -19,6 +20,7 @@ export default function D3Viewer(): JSX.Element {
   const [isZoomingOrPanning, setIsZoomingOrPanning] = useState<boolean>(false);
 
   const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
+  const [viewLabels, setViewLabels] = useState<boolean>(true);
 
   const [polygonsData, setPolygonsData] = useState<PolygonData[]>([]);
   const [currentZoom, setCurrentZoom] = useState(1);
@@ -218,23 +220,26 @@ export default function D3Viewer(): JSX.Element {
               className={styles.img}
             />
           </svg>
-
-          {/* {polygonsData.map((polygon, i) => {
-            return (
-              <Chip
-                label={polygon.label.name}
-                color="primary"
-                size="small"
-                key={i}
-                sx={{
-                  position: "absolute",
-                  top: `${polygon.label.coords?.y! / scaleFactor}px`,
-                  left: `${polygon.label.coords?.x! / scaleFactor}px`,
-                  display: polygon.label.visible ? "flex" : "none",
-                }}
-              />
-            );
-          })} */}
+          {viewLabels && (
+            <div className="chips">
+              {polygonsData.map((polygon, i) => {
+                return (
+                  <Chip
+                    label={polygon.label.name}
+                    color="primary"
+                    size="small"
+                    key={i}
+                    sx={{
+                      position: "absolute",
+                      top: `${polygon.label.coords?.y! / scaleFactor}px`,
+                      left: `${polygon.label.coords?.x! / scaleFactor}px`,
+                      display: polygon.label.visible ? "flex" : "none",
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
           <PolylineDrawer
             svgElement={svgRef}
             scaleFactor={scaleFactor}
@@ -265,11 +270,14 @@ export default function D3Viewer(): JSX.Element {
           />
         </div>
         <div className="footerRow">
-          <div>Current Zoom: {Math.round(currentZoom * 100)}%</div>
           <div>
+            <div>Current Zoom: {Math.round(currentZoom * 100)}%</div>
             <button className="reset">Fit to container</button>
             <button className="fullsize">Zoom to 100%</button>
           </div>
+          <button onClick={() => setViewLabels(!viewLabels)}>
+            {viewLabels ? "Hide Labels" : "View Labels"}
+          </button>
         </div>
         <ul className={styles.li}>
           {polygonsData.map((polygon, i) => (

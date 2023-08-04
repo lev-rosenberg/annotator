@@ -115,25 +115,25 @@ export function PolygonDrawer(props: polygonProps) {
     }
   }
 
-  function isPointWithinImage(pt: Point, dx: number = 0, dy: number = 0) {
-    const image = props.imgOriginalDims;
-    dx /= parseFloat(props.groupRef.current?.getAttribute("scale")!);
-    dy /= parseFloat(props.groupRef.current?.getAttribute("scale")!);
-    if (image?.width && image.height) {
-      if (
-        pt.x + dx < image.width &&
-        pt.x + dx > 0 &&
-        pt.y + dy < image.height &&
-        pt.y + dy > 0
-      ) {
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      return false;
-    }
-  }
+  // function isPointWithinImage(pt: Point, dx: number = 0, dy: number = 0) {
+  //   const image = props.imgOriginalDims;
+  //   dx /= parseFloat(props.groupRef.current?.getAttribute("scale")!);
+  //   dy /= parseFloat(props.groupRef.current?.getAttribute("scale")!);
+  //   if (image?.width && image.height) {
+  //     if (
+  //       pt.x + dx < image.width &&
+  //       pt.x + dx > 0 &&
+  //       pt.y + dy < image.height &&
+  //       pt.y + dy > 0
+  //     ) {
+  //       return true;
+  //     } else {
+  //       return false;
+  //     }
+  //   } else {
+  //     return false;
+  //   }
+  // }
 
   function handlePolygonDelete(e: React.MouseEvent<SVGElement, MouseEvent>) {
     e.preventDefault();
@@ -164,7 +164,6 @@ export function PolygonDrawer(props: polygonProps) {
           onMouseDown={(e) => {
             if (e.button == 0) {
               e.stopPropagation();
-              e.preventDefault();
 
               dragStart(e);
               props.onPolygonDrag(true);
@@ -172,7 +171,6 @@ export function PolygonDrawer(props: polygonProps) {
           }}
           onMouseMove={(e) => {
             e.stopPropagation();
-            e.preventDefault();
             if (props.polygonDragging) {
               handlePolygonDragMove(
                 e,
@@ -186,8 +184,6 @@ export function PolygonDrawer(props: polygonProps) {
           }}
           onMouseUp={(e) => {
             e.stopPropagation();
-            e.preventDefault();
-
             dragEnd(e);
             handlePolygonDragEnd(
               e,
@@ -211,7 +207,7 @@ export function PolygonDrawer(props: polygonProps) {
             }}
             fill="transparent"
             stroke="red"
-            strokeWidth={2 / zoom.transformMatrix.scaleX}
+            strokeWidth={1 / zoom.transformMatrix.scaleX}
           />
           {props.polygon.coordinates?.map((pt, i) => (
             <Circle

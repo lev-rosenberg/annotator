@@ -54,12 +54,13 @@ export function PolygonDrawer(props: PolygonDrawerProps) {
 
   function handlePolygonDragMove(e: KonvaEventObject<DragEvent>) {
     if (e.target.getClassName() == "Group") {
-      const dx = e.target.attrs.x;
-      const dy = e.target.attrs.y;
-      const target = e.target as unknown as Konva.Group;
+      const dx = e.currentTarget.attrs.x;
+      const dy = e.currentTarget.attrs.y;
+      const target = e.currentTarget as unknown as Konva.Group;
       const circles = target.getChildren(function (node: Konva.Node) {
         return node.getClassName() === "Circle";
       });
+
       const circlesInImage = circles.every((circle) =>
         isPointWithinImage(
           circle.attrs.x + dx,
@@ -69,19 +70,18 @@ export function PolygonDrawer(props: PolygonDrawerProps) {
       );
       if (circlesInImage) {
         let newPoints: Point[] = [];
-        circles.forEach((circle) =>
-          newPoints.push({ x: circle.attrs.x + dx, y: circle.attrs.y + dy })
-        );
-        e.target.attrs.points = newPoints;
-        console.log("move", e.target.attrs.points);
+        circles.forEach((circle) => {
+          newPoints.push({ x: circle.attrs.x + dx, y: circle.attrs.y + dy });
+        });
+        e.currentTarget.attrs.points = newPoints;
       }
     }
   }
 
   function handlePolygonDragEnd(e: KonvaEventObject<DragEvent>) {
     if (e.target.getClassName() == "Group") {
-      const p_index = e.target.attrs.id;
-      const newPoints = e.target.attrs.points;
+      const p_index = e.currentTarget.attrs.id;
+      const newPoints = e.currentTarget.attrs.points;
       props.onPolygonChanged(p_index, newPoints);
     }
   }
@@ -106,14 +106,16 @@ export function PolygonDrawer(props: PolygonDrawerProps) {
           props.onPolygonClicked(i);
         }}
         onDragEnd={(e) => {
+          // e.evt.stopImmediatePropagation();
+
           handlePolygonDragEnd(e);
-          e.cancelBubble = true;
         }}
         onDragMove={(e) => {
+          // e.evt.stopImmediatePropagation();
+
           handlePolygonDragMove(e);
-          e.cancelBubble = true;
         }}
-        onDragStart={(e) => (e.cancelBubble = true)}
+        // onDragStart={(e) => e.evt.stopImmediatePropagation()}
         onContextMenu={handlePolygonDelete}
         points={points}
       >
