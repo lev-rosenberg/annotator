@@ -30,6 +30,7 @@ export default function VisxViewer(): JSX.Element {
   const [isPanning, setIsPanning] = useState<boolean>(false);
   const [polygonDragging, setPolygonDragging] = useState<boolean>(false);
   const [viewLabels, setViewLabels] = useState<boolean>(true);
+  const [circlesVisible, setCirclesVisible] = useState<boolean[]>([]);
 
   const [initialTransform, setInitialTransform] = useState<
     TransformMatrix | undefined
@@ -52,6 +53,7 @@ export default function VisxViewer(): JSX.Element {
     };
     img.src = "/images/maddoxdev.jpg";
     handleResize();
+    handleCirclesNotVisible();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -76,7 +78,7 @@ export default function VisxViewer(): JSX.Element {
       const jsonData = customJson(num, img.naturalWidth, img.naturalHeight);
       setImgDimensions({ width: img.width, height: img.height });
       setPolygonsData(jsonData);
-      // handleCirclesNotVisible();
+      handleCirclesNotVisible();
 
       assignLabelCoords();
       setCurrImage(image);
@@ -139,6 +141,21 @@ export default function VisxViewer(): JSX.Element {
   /* ********* ZOOMING FUNCTIONS ABOVE ********* */
 
   /* ****** POLYGON DATA UPDATING BELOW ****** */
+
+  function handleCirclesNotVisible() {
+    setCirclesVisible((prevCirclesVisible) => {
+      const newData = Array(prevCirclesVisible.length).fill(false);
+      return newData;
+    });
+  }
+
+  function handlePolygonClicked(index: number) {
+    setCirclesVisible((prevCirclesVisible) => {
+      const newData = Array(prevCirclesVisible.length).fill(false);
+      newData[index] = true;
+      return newData;
+    });
+  }
 
   function handlePolygonChanged(index: number, points: Point[]) {
     setPolygonsData((prevPolygonsData) => {
@@ -215,6 +232,9 @@ export default function VisxViewer(): JSX.Element {
     ]);
     setDraftPolygon(null);
     setIsDrawing(false);
+    setCirclesVisible((prevPolygonsVisible) => {
+      return [...prevPolygonsVisible, false];
+    });
   }
 
   function findBottomRightCoordinate(coordinates: Point[]): Point {
@@ -274,7 +294,12 @@ export default function VisxViewer(): JSX.Element {
           </Link>
           <h3>Visx annotator demo</h3>
           <div className="headerRow">
-            <button onClick={() => setIsDrawing(!isDrawing)}>
+            <button
+              onClick={() => {
+                setIsDrawing(!isDrawing);
+                handleCirclesNotVisible();
+              }}
+            >
               {isDrawing ? "Stop drawing" : "Start drawing"}
             </button>
             <div>
@@ -329,6 +354,8 @@ export default function VisxViewer(): JSX.Element {
                 fitOnLoad={(width: number, height: number) =>
                   handleZoomToFit(width, height, zoom)
                 }
+                circlesVisible={circlesVisible}
+                onPolygonClicked={(index) => handlePolygonClicked(index)}
               />
             )}
             <FormDialog

@@ -31,6 +31,8 @@ interface annotatorProps {
   onPolygonDeleted: (index: number) => void;
   zoom: ProvidedZoom<SVGSVGElement> & any;
   fitOnLoad: (width: number, height: number) => void;
+  circlesVisible: boolean[];
+  onPolygonClicked: (index: number) => void;
 }
 
 export default function VisxAnnotator(props: annotatorProps) {
@@ -124,13 +126,11 @@ export default function VisxAnnotator(props: annotatorProps) {
         onWheel={(e) => {
           props.setCurrZoom(zoom.transformMatrix.scaleX);
         }}
-        onMouseDown={() => {
-          if (!props.isDrawing) {
-            props.onZoomPan(true);
-          }
-        }}
         onMouseMove={(e) => {
           handleMouseMove(e);
+          if (zoom.isDragging) {
+            props.onZoomPan(true);
+          }
         }}
         onMouseUp={(e) => props.onZoomPan(false)}
       >
@@ -149,6 +149,7 @@ export default function VisxAnnotator(props: annotatorProps) {
           }}
           onClick={(e) => {
             e.stopPropagation();
+
             if (!zoom.isDragging && props.isDrawing) {
               handleDrawPolylineOnClick(e);
             }
@@ -177,7 +178,9 @@ export default function VisxAnnotator(props: annotatorProps) {
                 onPolygonDeleted={props.onPolygonDeleted}
                 groupRef={groupRef}
                 polygonDragging={props.polygonDragging}
-                onPolygonDrag={(bool) => props.onPolygonDrag(bool)}
+                onPolygonDrag={props.onPolygonDrag}
+                onPolygonClicked={props.onPolygonClicked}
+                circlesVisible={props.circlesVisible}
               />
             ))}
           </>

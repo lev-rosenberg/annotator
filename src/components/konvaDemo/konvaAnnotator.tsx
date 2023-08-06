@@ -145,14 +145,14 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
   }
   /* ********* DRAGGING HANDLERS ABOVE ********* */
 
-  /* ********* POLYGON RIGHT CLICK ABOVE  ********* */
+  /* ********* POLYGON DELETION BELOW  ********* */
 
   function handlePolygonDelete(e: KonvaEventObject<PointerEvent>) {
     e.evt.preventDefault();
     const p_index = e.target.attrs.id;
     props.onPolygonDeleted(p_index);
   }
-  /* ********* POLYGON RIGHT CLICK ABOVE ********* */
+  /* ********* POLYGON DELETION ABOVE ********* */
 
   /* ********* ZOOM AND PAN BELOW ********* */
 
@@ -210,7 +210,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
             id={i.toString()}
             points={convertPoints(points)}
             closed={true}
-            strokeWidth={2 / props.currZoom}
+            strokeWidth={1 / props.currZoom}
             stroke="red"
             onMouseEnter={() => {
               stage!.container().style.cursor = "move";
@@ -304,7 +304,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
         <Polyline />
         <Line // this is the line from the end of the polyline to my mouse as you draw
           points={polylineToMouse()}
-          strokeWidth={2 / props.currZoom}
+          strokeWidth={1 / props.currZoom}
           stroke="red"
         />
         {props.polygonsData?.map((polygon, i) => (

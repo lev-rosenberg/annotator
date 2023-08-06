@@ -177,7 +177,7 @@ export default function D3Viewer(): JSX.Element {
           </button>
           <div>
             <button
-              onClick={() => handleChangeImage("/images/maddoxdev.jpg", 1000)}
+              onClick={() => handleChangeImage("/images/maddoxdev.jpg", 0)}
               className="reset"
             >
               idk what this is tbh (this one is normal)

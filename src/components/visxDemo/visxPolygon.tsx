@@ -19,11 +19,13 @@ interface polygonProps {
   polygonDragging: boolean;
   onPolygonDrag: (bool: boolean) => void;
   groupRef: RefObject<SVGSVGElement>;
+  onPolygonClicked: (index: number) => void;
+  circlesVisible: boolean[];
 }
 
 export function PolygonDrawer(props: polygonProps) {
-  let zoom = props.zoom;
-
+  const zoom = props.zoom;
+  const i = props.i;
   function handlePolygonDragMove(
     e: React.MouseEvent<SVGElement, MouseEvent>,
     dx: number,
@@ -142,7 +144,7 @@ export function PolygonDrawer(props: polygonProps) {
   }
   return (
     <Drag
-      key={props.i}
+      key={i}
       width={props.width}
       height={props.height}
       resetOnStart
@@ -157,21 +159,21 @@ export function PolygonDrawer(props: polygonProps) {
           props.imgOriginalDims?.height! * zoom.transformMatrix.scaleX,
       }}
     >
-      {({ dragStart, dragEnd, dragMove, dx, dy }) => (
+      {({ dragStart, dragEnd, dragMove, isDragging, dx, dy }) => (
         <Group
-          key={props.i}
-          id={props.i.toString()}
+          key={i}
+          id={i.toString()}
+          onClick={() => props.onPolygonClicked(i)}
           onMouseDown={(e) => {
-            if (e.button == 0) {
-              e.stopPropagation();
-
+            e.stopPropagation();
+            if (e.button == 0 && props.circlesVisible[i]) {
+              console.log(props.circlesVisible);
               dragStart(e);
-              props.onPolygonDrag(true);
             }
           }}
           onMouseMove={(e) => {
             e.stopPropagation();
-            if (props.polygonDragging) {
+            if (isDragging) {
               handlePolygonDragMove(
                 e,
                 dx,
@@ -180,10 +182,12 @@ export function PolygonDrawer(props: polygonProps) {
                 props.polygon.coordinates
               );
               dragMove(e);
+              props.onPolygonDrag(true);
             }
           }}
           onMouseUp={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             dragEnd(e);
             handlePolygonDragEnd(
               e,
@@ -209,13 +213,13 @@ export function PolygonDrawer(props: polygonProps) {
             stroke="red"
             strokeWidth={1 / zoom.transformMatrix.scaleX}
           />
-          {props.polygon.coordinates?.map((pt, i) => (
+          {props.polygon.coordinates?.map((pt, j) => (
             <Circle
-              key={i}
-              id={i.toString()}
+              key={j}
+              id={j.toString()}
               cx={pt.x}
               cy={pt.y}
-              r={6 / zoom.transformMatrix.scaleX}
+              r={props.circlesVisible[i] ? 6 / zoom.transformMatrix.scaleX : 0}
               fill="red"
               opacity={0.5}
               style={{
@@ -224,11 +228,11 @@ export function PolygonDrawer(props: polygonProps) {
               onMouseDown={(e) => {
                 e.stopPropagation();
                 dragStart(e);
-                props.onPolygonDrag(true);
               }}
               onMouseMove={(e) => {
                 e.stopPropagation();
-                if (props.polygonDragging) {
+                if (isDragging) {
+                  props.onPolygonDrag(true);
                   dragMove(e);
                   handleVertexDragMove(
                     e,

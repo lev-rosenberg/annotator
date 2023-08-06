@@ -54,7 +54,7 @@ export default function KonvaViewer(): JSX.Element {
     setDivDimensions({ width: dims?.width, height: dims?.height });
   }
 
-  function handleChangeImage(image: string, num: number) {
+  const handleChangeImage = useCallback((image: string, num: number) => {
     const img = new Image();
     img.onload = function () {
       const jsonData = customJson(num, img.naturalWidth, img.naturalHeight);
@@ -69,7 +69,7 @@ export default function KonvaViewer(): JSX.Element {
     img.src = image;
     setIsDrawing(false);
     //
-  }
+  }, []);
 
   /* ****** IMAGE LOADING ABOVE ****** */
 
@@ -93,8 +93,8 @@ export default function KonvaViewer(): JSX.Element {
         scaleY: scale,
         duration: 0.1,
       });
-      labelsToCoords();
     }
+    labelsToCoords();
   }
 
   function handleZoom100() {
@@ -119,11 +119,36 @@ export default function KonvaViewer(): JSX.Element {
         duration: 0.1,
       });
     }
+    labelsToCoords();
   }
 
   /* ****** ZOOM BUTTONS ABOVE ****** */
 
   /* ****** LABEL SELECTION AND UPDATING BELOW ****** */
+
+  const getLabelCoords = useCallback(
+    (polygon: Point[]) => {
+      if (layer && stage) {
+        const bottomRightPoint: Point | null =
+          findBottomRightCoordinate(polygon);
+        return {
+          x:
+            bottomRightPoint.x * currZoom +
+            stage.attrs.container.offsetLeft +
+            layer.attrs.x +
+            10 * currZoom,
+          y:
+            bottomRightPoint.y * currZoom +
+            stage.attrs.container.offsetTop +
+            layer.attrs.y +
+            10 * currZoom,
+        };
+      } else {
+        return null;
+      }
+    },
+    [currZoom, layer, stage]
+  );
 
   const labelsToCoords = useCallback(() => {
     if (layer && stage) {
@@ -139,32 +164,11 @@ export default function KonvaViewer(): JSX.Element {
         return polygons;
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currZoom, currImage, isDraggingLayer]);
+  }, [getLabelCoords, layer, stage]);
 
   useEffect(() => {
     labelsToCoords();
-  }, [labelsToCoords]);
-
-  function getLabelCoords(polygon: Point[]) {
-    if (layer && stage) {
-      const bottomRightPoint: Point | null = findBottomRightCoordinate(polygon);
-      return {
-        x:
-          bottomRightPoint.x * currZoom +
-          stage.attrs.container.offsetLeft +
-          layer.attrs.x +
-          10 * currZoom,
-        y:
-          bottomRightPoint.y * currZoom +
-          stage.attrs.container.offsetTop +
-          layer.attrs.y +
-          10 * currZoom,
-      };
-    } else {
-      return null;
-    }
-  }
+  }, [labelsToCoords, isDraggingLayer, handleChangeImage]);
 
   function handleLabelSelect(option: string) {
     const newLabel = {
@@ -273,7 +277,7 @@ export default function KonvaViewer(): JSX.Element {
         </button>
         <div>
           <button
-            onClick={() => handleChangeImage("/images/maddoxdev.jpg", 0)}
+            onClick={() => handleChangeImage("/images/maddoxdev.jpg", 10)}
             className="reset"
           >
             idk what this is tbh (this one is normal)
