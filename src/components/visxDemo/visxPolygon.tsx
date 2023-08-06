@@ -174,6 +174,7 @@ export function PolygonDrawer(props: polygonProps) {
           onMouseMove={(e) => {
             e.stopPropagation();
             if (isDragging) {
+              console.log("draging");
               handlePolygonDragMove(
                 e,
                 dx,
@@ -186,17 +187,19 @@ export function PolygonDrawer(props: polygonProps) {
             }
           }}
           onMouseUp={(e) => {
+            console.log("dragged");
             e.stopPropagation();
-            e.preventDefault();
-            dragEnd(e);
-            handlePolygonDragEnd(
-              e,
-              dx,
-              dy,
-              zoom.transformMatrix.scaleX,
-              props.polygon.coordinates
-            );
-            props.onPolygonDrag(false);
+            if (isDragging) {
+              dragEnd(e);
+              handlePolygonDragEnd(
+                e,
+                dx,
+                dy,
+                zoom.transformMatrix.scaleX,
+                props.polygon.coordinates
+              );
+              props.onPolygonDrag(false);
+            }
           }}
           onContextMenuCapture={(e) => {
             e.preventDefault();

@@ -172,6 +172,11 @@ export default function VisxViewer(): JSX.Element {
       newData.splice(index, 1);
       return newData;
     });
+    setCirclesVisible((prevCirclesVisible) => {
+      const newData = [...prevCirclesVisible];
+      newData.splice(index, 1);
+      return newData;
+    });
   }
 
   /* ****** POLYGON DATA UPDATING ABOVE ****** */
