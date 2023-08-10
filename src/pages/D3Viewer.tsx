@@ -187,13 +187,13 @@ export default function D3Viewer(): JSX.Element {
               onClick={() => handleChangeImage("/images/maddoxdev.jpg", 0)}
               className="reset"
             >
-              idk what this is tbh (this one is normal)
+              is this a gear? a tube? (this one is normal)
             </button>
             <button
               onClick={() => handleChangeImage("/images/bigimage.jpg", 0)}
               className="reset"
             >
-              tractor go brrrr (this img is huge)
+              tractorrrrr (this img is huge)
             </button>
             <button
               onClick={() => handleChangeImage("/images/bottles.jpg", 0)}

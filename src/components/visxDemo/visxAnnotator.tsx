@@ -129,6 +129,9 @@ export default function VisxAnnotator(props: annotatorProps) {
             props.onZoomPan(true);
           }
         }}
+        onWheel={() => {
+          props.setCurrZoom(zoom.transformMatrix.scaleX);
+        }}
       >
         <Group
           transform={zoom.toString()}

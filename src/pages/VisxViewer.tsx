@@ -310,7 +310,7 @@ export default function VisxViewer(): JSX.Element {
                 }
                 className="reset"
               >
-                idk what this is tbh (this img is avergae)
+                is this a gear? a tube? (this img is average)
               </button>
               <button
                 onClick={() =>
@@ -318,7 +318,7 @@ export default function VisxViewer(): JSX.Element {
                 }
                 className="reset"
               >
-                tractor go brrrr (this img is huge)
+                tractorrrrr (this img is huge)
               </button>
               <button
                 onClick={() => handleChangeImage("/images/paul.jpg", 0, zoom)}
