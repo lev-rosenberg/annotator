@@ -19,7 +19,7 @@ export default function KonvaViewer(): JSX.Element {
   const [currZoom, setCurrZoom] = useState(0.2);
   const [draftPolygon, setDraftPolygon] = useState<Point[] | null>(null);
   const [polygonsData, setPolygonsData] = useState<PolygonData[]>([]);
-  const [circlesVisible, setCirclesVisible] = useState<boolean[]>([]);
+  const [polygonsEditable, setPolygonsEditable] = useState<boolean[]>([]);
 
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [isDraggingLayer, setIsDraggingLayer] = useState<boolean>(false);
@@ -181,7 +181,7 @@ export default function KonvaViewer(): JSX.Element {
       { coordinates: draftPolygon, label: newLabel },
     ]);
     setDraftPolygon(null);
-    setCirclesVisible((prevPolygonsVisible) => {
+    setPolygonsEditable((prevPolygonsVisible) => {
       return [...prevPolygonsVisible, false];
     });
   }
@@ -217,15 +217,15 @@ export default function KonvaViewer(): JSX.Element {
   /* ****** POLYGON DATA UPDATING BELOW ****** */
 
   function handleCirclesNotVisible() {
-    setCirclesVisible((prevCirclesVisible) => {
-      const newData = Array(prevCirclesVisible.length).fill(false);
+    setPolygonsEditable((prevPolygonsEditable) => {
+      const newData = Array(prevPolygonsEditable.length).fill(false);
       return newData;
     });
   }
 
   function handlePolygonClicked(index: number) {
-    setCirclesVisible((prevCirclesVisible) => {
-      const newData = Array(prevCirclesVisible.length).fill(false);
+    setPolygonsEditable((prevPolygonsEditable) => {
+      const newData = Array(prevPolygonsEditable.length).fill(false);
       newData[index] = true;
       return newData;
     });
@@ -246,8 +246,8 @@ export default function KonvaViewer(): JSX.Element {
       newData.splice(index, 1);
       return newData;
     });
-    setCirclesVisible((prevCirclesVisible) => {
-      const newData = [...prevCirclesVisible];
+    setPolygonsEditable((prevPolygonsEditable) => {
+      const newData = [...prevPolygonsEditable];
       newData.splice(index, 1);
       return newData;
     });
@@ -277,7 +277,7 @@ export default function KonvaViewer(): JSX.Element {
         </button>
         <div>
           <button
-            onClick={() => handleChangeImage("/images/maddoxdev.jpg", 10)}
+            onClick={() => handleChangeImage("/images/maddoxdev.jpg", 0)}
             className="reset"
           >
             idk what this is tbh (this one is normal)
@@ -292,7 +292,7 @@ export default function KonvaViewer(): JSX.Element {
             onClick={() => handleChangeImage("/images/paul.jpg", 0)}
             className="reset"
           >
-            paul (this one has lots of polygons)
+            paul (this img is small)
           </button>
         </div>
       </div>
@@ -300,7 +300,7 @@ export default function KonvaViewer(): JSX.Element {
         <KonvaAnnotator
           currImage={currImage}
           currZoom={currZoom}
-          changeZoom={(zoom) => setCurrZoom(zoom)}
+          onZoomChange={(zoom) => setCurrZoom(zoom)}
           stageRef={stageRef}
           layerRef={layerRef}
           isDrawing={isDrawing}
@@ -312,7 +312,7 @@ export default function KonvaViewer(): JSX.Element {
           onPolygonChanged={handlePolygonChanged}
           onPolygonDeleted={handlePolygonDelete}
           divDimensions={divDimensions}
-          circlesVisible={circlesVisible}
+          polygonsEditable={polygonsEditable}
         />
         {viewLabels && (
           <div className="chips">

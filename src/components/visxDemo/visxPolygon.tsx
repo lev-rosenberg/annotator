@@ -20,28 +20,29 @@ interface polygonProps {
   onPolygonDrag: (bool: boolean) => void;
   groupRef: RefObject<SVGSVGElement>;
   onPolygonClicked: (index: number) => void;
-  circlesVisible: boolean[];
+  polygonsEditable: boolean[];
 }
 
 export function PolygonDrawer(props: polygonProps) {
   const zoom = props.zoom;
   const i = props.i;
+
   function handlePolygonDragMove(
     e: React.MouseEvent<SVGElement, MouseEvent>,
     dx: number,
     dy: number,
-    zoom: number,
+    scale: number,
     polygonCoords: Point[] | null
   ) {
     const vertices = Array.from(e.currentTarget.children).slice(1);
     const polygon = e.currentTarget.firstElementChild;
-    const pdx = dx / zoom;
-    const pdy = dy / zoom;
+    dx /= scale;
+    dy /= scale;
     if (vertices && polygon && polygonCoords) {
       const newPoints = polygonCoords.map((pt, i) => {
-        vertices[i].setAttribute("cx", (pt.x + pdx).toString());
-        vertices[i].setAttribute("cy", (pt.y + pdy).toString());
-        return { x: pt.x + pdx, y: pt.y + pdy };
+        vertices[i].setAttribute("cx", (pt.x + dx).toString());
+        vertices[i].setAttribute("cy", (pt.y + dy).toString());
+        return { x: pt.x + dx, y: pt.y + dy };
       });
       polygon.setAttribute(
         "points",
@@ -54,17 +55,16 @@ export function PolygonDrawer(props: polygonProps) {
     e: React.MouseEvent<SVGElement, MouseEvent>,
     dx: number,
     dy: number,
-    zoom: number,
+    scale: number,
     polygonCoords: Point[] | null
   ) {
     const index = parseInt(e.currentTarget.id);
-    const pdx = dx / zoom;
-    const pdy = dy / zoom;
+    dx /= scale;
+    dy /= scale;
     if (polygonCoords) {
       const newPoints: Point[] = polygonCoords.map((pt) => {
-        return { x: pt.x + pdx, y: pt.y + pdy };
+        return { x: pt.x + dx, y: pt.y + dy };
       });
-
       props.onPolygonChanged(index, newPoints);
     }
   }
@@ -73,13 +73,13 @@ export function PolygonDrawer(props: polygonProps) {
     e: React.MouseEvent<SVGElement, MouseEvent>,
     dx: number,
     dy: number,
-    zoom: number,
+    scale: number,
     polygonCoords: Point[] | null
   ) {
     const polygon = e.currentTarget.parentNode?.firstElementChild;
     if (polygonCoords && polygon) {
-      dx /= zoom;
-      dy /= zoom;
+      dx /= scale;
+      dy /= scale;
       const c_index = parseInt(e.currentTarget.id);
       const { x, y } = polygonCoords[c_index];
       e.currentTarget.setAttribute("cx", (x + dx).toString());
@@ -98,15 +98,15 @@ export function PolygonDrawer(props: polygonProps) {
     e: React.MouseEvent<SVGElement, MouseEvent>,
     dx: number,
     dy: number,
-    zoom: number,
+    scale: number,
     polygonCoords: Point[] | null
   ) {
     const polygon = e.currentTarget.parentElement;
     if (polygon) {
       const p_index = parseInt(polygon.id);
       const c_index = parseInt(e.currentTarget.id);
-      dx /= zoom;
-      dy /= zoom;
+      dx /= scale;
+      dy /= scale;
       if (polygonCoords) {
         const newPoints = [...polygonCoords];
         const { x, y } = polygonCoords[c_index];
@@ -116,26 +116,6 @@ export function PolygonDrawer(props: polygonProps) {
       }
     }
   }
-
-  // function isPointWithinImage(pt: Point, dx: number = 0, dy: number = 0) {
-  //   const image = props.imgOriginalDims;
-  //   dx /= parseFloat(props.groupRef.current?.getAttribute("scale")!);
-  //   dy /= parseFloat(props.groupRef.current?.getAttribute("scale")!);
-  //   if (image?.width && image.height) {
-  //     if (
-  //       pt.x + dx < image.width &&
-  //       pt.x + dx > 0 &&
-  //       pt.y + dy < image.height &&
-  //       pt.y + dy > 0
-  //     ) {
-  //       return true;
-  //     } else {
-  //       return false;
-  //     }
-  //   } else {
-  //     return false;
-  //   }
-  // }
 
   function handlePolygonDelete(e: React.MouseEvent<SVGElement, MouseEvent>) {
     e.preventDefault();
@@ -166,15 +146,13 @@ export function PolygonDrawer(props: polygonProps) {
           onClick={() => props.onPolygonClicked(i)}
           onMouseDown={(e) => {
             e.stopPropagation();
-            if (e.button == 0 && props.circlesVisible[i]) {
-              console.log(props.circlesVisible);
+            if (e.button == 0 && props.polygonsEditable[i]) {
               dragStart(e);
             }
           }}
           onMouseMove={(e) => {
             e.stopPropagation();
             if (isDragging) {
-              console.log("draging");
               handlePolygonDragMove(
                 e,
                 dx,
@@ -187,7 +165,6 @@ export function PolygonDrawer(props: polygonProps) {
             }
           }}
           onMouseUp={(e) => {
-            console.log("dragged");
             e.stopPropagation();
             if (isDragging) {
               dragEnd(e);
@@ -222,7 +199,9 @@ export function PolygonDrawer(props: polygonProps) {
               id={j.toString()}
               cx={pt.x}
               cy={pt.y}
-              r={props.circlesVisible[i] ? 6 / zoom.transformMatrix.scaleX : 0}
+              r={
+                props.polygonsEditable[i] ? 6 / zoom.transformMatrix.scaleX : 0
+              }
               fill="red"
               opacity={0.5}
               style={{

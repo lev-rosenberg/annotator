@@ -34,7 +34,6 @@ export function PolygonsDrawer (props: polygonsProps) {
       handlePolygonDrag(this, e);
     }
   });
-
   function handlePolygonDrag(polygon: Element, e: d3.D3DragEvent<SVGCircleElement, SVGSVGElement, SVGSVGElement>) {
     const polygonGroup = d3.select(polygon.parentElement);
     const circles = polygonGroup.selectAll("circle");
@@ -54,11 +53,11 @@ export function PolygonsDrawer (props: polygonsProps) {
     polygonSvg.attr("points", convertPoints(newPoints));
     props.onPolygonChanged(index, newPoints);
   }
-
-  const circleDrag = d3.drag().on("drag", function (e: DragEvent) {
+  const vertexDrag = d3.drag().on("drag", function (e: DragEvent) {
     if (!props.isDrawing && isWithinImage(e.x, e.y, scale, props.svgElement)) {
       handleVertexDrag(this, e);
     }
+    
   });
 
   function handleVertexDrag(vertex: Element, e: MouseEvent) {
@@ -92,7 +91,7 @@ export function PolygonsDrawer (props: polygonsProps) {
     // this is the previously drawn polygons, with circles at each vertex.
     svg
       .selectAll(".polygon-group")
-      .data(props.polygonsData as PolygonData[]) // associate each polygon with an element of polygonsData[]
+      .data(props.polygonsData) // associate each polygon with an element of polygonsData[]
       .join(
         (enter) => {
           const polygon = enter
@@ -124,9 +123,9 @@ export function PolygonsDrawer (props: polygonsProps) {
           update
             .selectAll("circle")
             .data((d) => d.coordinates as Point[])
-            .attr("cx", (pt) => pt.x) // update the vertex's x-coordinate
-            .attr("cy", (pt) => pt.y) // update the vertex's y-coordinate
-            .attr("fill", props.isDrawing ? "none" : "red") // props.isDrawing may have updated as well
+            .attr("cx", (pt) => pt.x) 
+            .attr("cy", (pt) => pt.y) 
+            .attr("fill", props.isDrawing ? "none" : "red") 
             .attr("r", (7 * scale) / t.k);
 
           update
@@ -137,15 +136,14 @@ export function PolygonsDrawer (props: polygonsProps) {
         },
         (exit) => {
           exit
-            // .transition()
-            // .duration(500)
-            // .style('opacity', 0)
             .remove();
+          console.log(exit)
+
         }
       )
       .attr("transform", t.toString());
 
-    svg.selectAll<Element, unknown>("circle").call(circleDrag);
+    svg.selectAll<Element, unknown>("circle").call(vertexDrag);
     svg.selectAll<Element, unknown>("polygon").call(polyDrag);
 
     //deletion
@@ -158,7 +156,7 @@ export function PolygonsDrawer (props: polygonsProps) {
       
       svg.on("zoom", null);
     };
-  }, [t, props.polygonsData, props.isDrawing, props.scaleFactor, svg, props, scale, handlePolygonDelete, circleDrag, polyDrag]);
+  }, [t, props.polygonsData, props.isDrawing, props.scaleFactor, svg, props, scale, handlePolygonDelete, vertexDrag, polyDrag]);
 
 
   return null

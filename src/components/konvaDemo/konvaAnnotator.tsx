@@ -3,14 +3,13 @@ import { Dims, Point, PolygonData } from "../../types/annotatorTypes";
 import { convertPoints, isPointWithinImage } from "./utilities";
 import useImage from "use-image";
 import { KonvaEventObject } from "konva/lib/Node";
-import { PolygonDrawer } from "./konvaPolygon";
 import { Stage, Layer, Circle, Line, Image, Group } from "react-konva";
 import Konva from "konva";
 
 interface annotatorProps {
   currImage: string;
   currZoom: number;
-  changeZoom: (zoom: number) => void;
+  onZoomChange: (zoom: number) => void;
   stageRef: RefObject<Konva.Stage>;
   layerRef: RefObject<Konva.Layer>;
   isDrawing: boolean;
@@ -22,7 +21,7 @@ interface annotatorProps {
   onPolygonChanged: (index: number, points: Point[]) => void;
   onPolygonDeleted: (index: number) => void;
   divDimensions: Dims | undefined;
-  circlesVisible: boolean[];
+  polygonsEditable: boolean[];
 }
 
 interface PolygonProps {
@@ -97,7 +96,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
     const new_y = e.target.attrs.y;
     let linePoints: Point[] = e.target.parent?.children![0].getAttr("points");
     if (isPointWithinImage(new_x, new_y, image)) {
-      linePoints[c_index * 2] = new_x;
+      linePoints[c_index * 2] = new_x; //this index*2 is because the points are stored as a list [x1,y1,x2,y2,...]
       linePoints[c_index * 2 + 1] = new_y;
     } else {
       e.target.attrs.x = linePoints[c_index * 2];
@@ -156,7 +155,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
 
   /* ********* ZOOM AND PAN BELOW ********* */
 
-  function zoomLayer(e: KonvaEventObject<WheelEvent>) {
+  function handleZoomLayer(e: KonvaEventObject<WheelEvent>) {
     e.evt.preventDefault();
     if (layer && stage) {
       const oldScale = layer.scaleX();
@@ -167,8 +166,8 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       };
       const direction = e.evt.deltaY > 0 ? 1 : -1; // how to scale? Zoom in? Or zoom out?
       const newScale = direction > 0 ? oldScale * zoomBy : oldScale / zoomBy;
-      if (newScale <= 10.2 && newScale >= 0.01) {
-        props.changeZoom(newScale);
+      if (newScale <= 10 && newScale >= 0.01) {
+        props.onZoomChange(newScale);
         layer.scale({ x: newScale, y: newScale });
         const newPos = {
           x: pointer.x - mousePointTo.x * newScale,
@@ -185,11 +184,18 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
 
   function Polyline() {
     return (
-      <Line
-        points={convertPoints(polylinePoints)}
-        strokeWidth={1 / props.currZoom}
-        stroke="red"
-      />
+      <>
+        <Line // this is the line from the end of the polyline to my mouse as you draw
+          points={polylineToMouse()}
+          strokeWidth={1 / props.currZoom}
+          stroke="red"
+        />
+        <Line
+          points={convertPoints(polylinePoints)} // this is drawn polyline
+          strokeWidth={1 / props.currZoom}
+          stroke="red"
+        />
+      </>
     );
   }
 
@@ -198,7 +204,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       <>
         <Group
           id={i.toString()}
-          draggable={props.circlesVisible[i] ? true : false}
+          draggable={props.polygonsEditable[i] ? true : false}
           onClick={() => props.onPolygonClicked(i)}
           onDragEnd={handlePolygonDragEnd}
           onDragMove={handlePolygonDragMove}
@@ -227,7 +233,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
               id={index.toString()}
               x={pt.x}
               y={pt.y}
-              radius={props.circlesVisible[i] ? 7 / props.currZoom : 0}
+              radius={props.polygonsEditable[i] ? 7 / props.currZoom : 0}
               fill="red"
               opacity={0.3}
               draggable
@@ -255,7 +261,7 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       width={props.divDimensions?.width}
       height={props.divDimensions?.height}
       onWheel={(e) => {
-        zoomLayer(e);
+        handleZoomLayer(e);
       }}
     >
       <Layer
@@ -265,8 +271,6 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
         }}
         onMouseMove={handleMouseMove}
         draggable={true}
-        width={image?.width}
-        height={image?.height}
         x={0}
         y={0}
         scaleX={0.2}
@@ -302,29 +306,9 @@ export default function KonvaAnnotator(props: annotatorProps): JSX.Element {
       >
         <Image image={image} alt="" />
         <Polyline />
-        <Line // this is the line from the end of the polyline to my mouse as you draw
-          points={polylineToMouse()}
-          strokeWidth={1 / props.currZoom}
-          stroke="red"
-        />
+
         {props.polygonsData?.map((polygon, i) => (
-          <>
-            {/* <PolygonDrawer
-              key={i}
-              points={polygon.coordinates!}
-              i={i}
-              polygonsData={polygonsData}
-              stageRef={props.stageRef}
-              isDrawing={props.isDrawing}
-              circlesVisible={props.circlesVisible}
-              currZoom={props.currZoom}
-              image={image}
-              onPolygonChanged={props.onPolygonChanged}
-              onPolygonDeleted={props.onPolygonDeleted}
-              onPolygonClicked={props.onPolygonClicked}
-            /> */}
-            <Polygon key={i + 1} i={i} points={polygon.coordinates!} />
-          </>
+          <Polygon key={i} i={i} points={polygon.coordinates!} />
         ))}
       </Layer>
     </Stage>

@@ -9,7 +9,7 @@ interface annotatorProps {
   draftPolygon: Point[] | null;
   polygonsData: PolygonData[];
   setIsDraggingLayer: (bool: boolean) => void;
-  setCurrentZoom: Dispatch<number>;
+  setCurrZoom: Dispatch<number>;
   scaleFactor: number;
 }
 
@@ -34,7 +34,7 @@ export function D3ZoomPan(props: annotatorProps) {
       handleSvgZoom(e, scale);
 
       t = e.transform;
-      props.setCurrentZoom(e.transform.k / scale);
+      props.setCurrZoom(e.transform.k / scale);
     })
     .on("end", function (e) {
       t = e.transform;
@@ -68,7 +68,7 @@ export function D3ZoomPan(props: annotatorProps) {
     d3.select(".fullsize").on("click", (e) => {
       svg.transition().duration(250).call(zoom.scaleTo, scale);
     });
-    props.setCurrentZoom(t.k / scale);
+    props.setCurrZoom(t.k / scale);
   }, [
     t,
     props.polygonsData,

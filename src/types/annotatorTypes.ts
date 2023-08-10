@@ -22,6 +22,7 @@ export interface PolygonData {
 
 
 /// this is for the JSON
+
 interface Label {
   coordinates: Point[];
   id: string;
@@ -30,22 +31,18 @@ interface Label {
   type: string;
 }
 
-// Define an interface for the 'LatestHumanAnnotation' type
 interface LatestHumanAnnotation {
   createdAt: number;
   id: string;
   inferenceId: string;
   labels: Label[];
-  // ... Add any other properties as needed
 }
 
-// Define an interface for the 'Annotation' type
 interface Annotation {
   latestHumanAnnotation: LatestHumanAnnotation;
   machinePrediction: null;
 }
 
-// Define an interface for the 'Annotations' type with a string index signature
 export interface Annotations {
   [key: string]: Annotation;
 }

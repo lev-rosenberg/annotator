@@ -30,11 +30,8 @@ export default function VisxViewer(): JSX.Element {
   const [isPanning, setIsPanning] = useState<boolean>(false);
   const [polygonDragging, setPolygonDragging] = useState<boolean>(false);
   const [viewLabels, setViewLabels] = useState<boolean>(true);
-  const [circlesVisible, setCirclesVisible] = useState<boolean[]>([]);
+  const [polygonsEditable, setPolygonsEditable] = useState<boolean[]>([]);
 
-  const [initialTransform, setInitialTransform] = useState<
-    TransformMatrix | undefined
-  >(undefined);
   /* ******* STATE MANAGMENT ABOVE ******* */
 
   const imageX = groupRef.current?.getAttribute("x");
@@ -90,7 +87,7 @@ export default function VisxViewer(): JSX.Element {
 
   /* ********* ZOOMING FUNCTIONS BELOW ********* */
 
-  function zoom100(zoom: ProvidedZoom<SVGSVGElement> & any) {
+  function handleZoom100(zoom: ProvidedZoom<SVGSVGElement> & any) {
     if (divDimensions?.width && divDimensions.height) {
       const center = {
         x: divDimensions?.width / 2,
@@ -143,15 +140,15 @@ export default function VisxViewer(): JSX.Element {
   /* ****** POLYGON DATA UPDATING BELOW ****** */
 
   function handleCirclesNotVisible() {
-    setCirclesVisible((prevCirclesVisible) => {
-      const newData = Array(prevCirclesVisible.length).fill(false);
+    setPolygonsEditable((prevPolygonsEditable) => {
+      const newData = Array(prevPolygonsEditable.length).fill(false);
       return newData;
     });
   }
 
   function handlePolygonClicked(index: number) {
-    setCirclesVisible((prevCirclesVisible) => {
-      const newData = Array(prevCirclesVisible.length).fill(false);
+    setPolygonsEditable((prevPolygonsEditable) => {
+      const newData = Array(prevPolygonsEditable.length).fill(false);
       newData[index] = true;
       return newData;
     });
@@ -172,8 +169,8 @@ export default function VisxViewer(): JSX.Element {
       newData.splice(index, 1);
       return newData;
     });
-    setCirclesVisible((prevCirclesVisible) => {
-      const newData = [...prevCirclesVisible];
+    setPolygonsEditable((prevPolygonsEditable) => {
+      const newData = [...prevPolygonsEditable];
       newData.splice(index, 1);
       return newData;
     });
@@ -237,7 +234,7 @@ export default function VisxViewer(): JSX.Element {
     ]);
     setDraftPolygon(null);
     setIsDrawing(false);
-    setCirclesVisible((prevPolygonsVisible) => {
+    setPolygonsEditable((prevPolygonsVisible) => {
       return [...prevPolygonsVisible, false];
     });
   }
@@ -280,7 +277,6 @@ export default function VisxViewer(): JSX.Element {
     <Zoom<SVGSVGElement>
       width={divDimensions?.width ? divDimensions?.width : 100}
       height={divDimensions?.height ? divDimensions?.height : 100}
-      initialTransformMatrix={initialTransform}
       scaleXMin={1 / 20}
       scaleXMax={10}
       scaleYMin={1 / 20}
@@ -314,7 +310,7 @@ export default function VisxViewer(): JSX.Element {
                 }
                 className="reset"
               >
-                idk what this is tbh (this one is normal)
+                idk what this is tbh (this img is avergae)
               </button>
               <button
                 onClick={() =>
@@ -328,7 +324,7 @@ export default function VisxViewer(): JSX.Element {
                 onClick={() => handleChangeImage("/images/paul.jpg", 0, zoom)}
                 className="reset"
               >
-                paul (lots of polygons)
+                paul (this img is small)
               </button>
             </div>
           </div>
@@ -359,7 +355,7 @@ export default function VisxViewer(): JSX.Element {
                 fitOnLoad={(width: number, height: number) =>
                   handleZoomToFit(width, height, zoom)
                 }
-                circlesVisible={circlesVisible}
+                polygonsEditable={polygonsEditable}
                 onPolygonClicked={(index) => handlePolygonClicked(index)}
               />
             )}
@@ -411,7 +407,9 @@ export default function VisxViewer(): JSX.Element {
                 >
                   Fit to container
                 </button>
-                <button onClick={() => zoom100(zoom)}>Zoom to 100%</button>
+                <button onClick={() => handleZoom100(zoom)}>
+                  Zoom to 100%
+                </button>
               </div>
             </div>
             <button onClick={() => setViewLabels(!viewLabels)}>

@@ -31,7 +31,7 @@ interface annotatorProps {
   onPolygonDeleted: (index: number) => void;
   zoom: ProvidedZoom<SVGSVGElement> & any;
   fitOnLoad: (width: number, height: number) => void;
-  circlesVisible: boolean[];
+  polygonsEditable: boolean[];
   onPolygonClicked: (index: number) => void;
 }
 
@@ -71,12 +71,12 @@ export default function VisxAnnotator(props: annotatorProps) {
   ) {
     const mouse = localPoint(e);
     if (mouse) {
-      const prop = convertSvgCoordinatesToImgDims(mouse, groupRef);
+      const propPoint = convertSvgCoordinatesToImgDims(mouse, groupRef);
 
-      if (!isClosingPolygon(mouse) && prop) {
+      if (!isClosingPolygon(mouse) && propPoint) {
         setPolylinePoints((prevPolylinePoints) => [
           ...prevPolylinePoints,
-          prop,
+          propPoint,
         ]);
       } else {
         props.onPolygonAdded(polylinePoints);
@@ -123,16 +123,12 @@ export default function VisxAnnotator(props: annotatorProps) {
           cursor: zoom.isDragging ? "grabbing" : "grab",
           touchAction: "none",
         }}
-        onWheel={(e) => {
-          props.setCurrZoom(zoom.transformMatrix.scaleX);
-        }}
         onMouseMove={(e) => {
           handleMouseMove(e);
           if (zoom.isDragging) {
             props.onZoomPan(true);
           }
         }}
-        onMouseUp={(e) => props.onZoomPan(false)}
       >
         <Group
           transform={zoom.toString()}
@@ -180,7 +176,7 @@ export default function VisxAnnotator(props: annotatorProps) {
                 polygonDragging={props.polygonDragging}
                 onPolygonDrag={props.onPolygonDrag}
                 onPolygonClicked={props.onPolygonClicked}
-                circlesVisible={props.circlesVisible}
+                polygonsEditable={props.polygonsEditable}
               />
             ))}
           </>

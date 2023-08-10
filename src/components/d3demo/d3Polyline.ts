@@ -89,13 +89,13 @@ export function PolylineDrawer (props: polylineProps) {
 
     polylinePoints.length && 
       svg
-      .selectAll(".drawing-polyline")
+      .selectAll("#drawing-polyline")
       .data([polylinePoints])
       .join(
         (enter) =>
           enter
             .append("polyline")
-            .attr("class", "drawing-polyline")
+            // .attr("class", "drawing-polyline")
             .attr("id", "drawing-polyline")
             .attr("stroke", "red")
             .attr("fill", "none")
@@ -126,7 +126,7 @@ export function PolylineDrawer (props: polylineProps) {
       svg.on("click", null);
       svg.on("mousemove", null);
       svg.on("mouseup", null);
-      !polylinePoints.length ? svg.select('.drawing-polyline').remove() : null
+      !polylinePoints.length ? svg.select('#drawing-polyline').remove() : null
     };
    
   }, [handleDrawPolylineOnClick, handlePolylineFollowMouseMove, polylinePoints, props.isDrawing, props.svgElement, scale, svg, t])

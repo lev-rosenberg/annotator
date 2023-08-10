@@ -23,7 +23,7 @@ export default function D3Viewer(): JSX.Element {
   const [viewLabels, setViewLabels] = useState<boolean>(true);
 
   const [polygonsData, setPolygonsData] = useState<PolygonData[]>([]);
-  const [currentZoom, setCurrentZoom] = useState(1);
+  const [currZoom, setCurrZoom] = useState(1);
   const [imgDimensions, setImgDimensions] = useState<Dims | undefined>();
   const [divDimensions, setDivDimensions] = useState<Dims | undefined>();
   const [currImage, setCurrImage] = useState("/images/maddoxdev.jpg");
@@ -52,7 +52,11 @@ export default function D3Viewer(): JSX.Element {
 
   let scaleFactor = 1;
   if (divDimensions && imgDimensions) {
-    scaleFactor = 1 / (divDimensions.width! / imgDimensions.width!);
+    scaleFactor =
+      divDimensions.width! < imgDimensions.width!
+        ? 1 / (divDimensions.width! / imgDimensions.width!)
+        : 1 / (divDimensions.height! / imgDimensions.height!);
+    // scaleFactor = 1 / (divDimensions.width! / imgDimensions.width!);
   }
 
   function handleResize() {
@@ -68,12 +72,15 @@ export default function D3Viewer(): JSX.Element {
       setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
       const jsonData = customJson(num, img.naturalWidth, img.naturalHeight);
       setPolygonsData(jsonData);
-      scaleFactor = 1 / (divDimensions?.width! / imgDimensions?.width!);
+
+      scaleFactor =
+        divDimensions?.width! < img.naturalWidth
+          ? 1 / (divDimensions?.height! / img.naturalWidth)
+          : 1 / (divDimensions?.width! / img.naturalWidth);
     };
     img.src = image;
     setIsDrawing(false);
     setCurrImage(image);
-    // assignLabelCoords();
   }
   /* ****** IMAGE LOADING ABOVE ****** */
 
@@ -109,8 +116,8 @@ export default function D3Viewer(): JSX.Element {
       const bottomRightPoint: Point | null = findBottomRightCoordinate(polygon);
       const proportional = t.apply([bottomRightPoint.x, bottomRightPoint.y]);
       return {
-        x: proportional[0] + 25 * currentZoom,
-        y: proportional[1] + 25 * currentZoom,
+        x: proportional[0] + 25 * currZoom,
+        y: proportional[1] + 25 * currZoom,
       };
     } else {
       return null;
@@ -129,7 +136,7 @@ export default function D3Viewer(): JSX.Element {
       });
       return polygons;
     });
-  }, [currentZoom, t, isZoomingOrPanning, currImage]);
+  }, [currZoom, t, isZoomingOrPanning, currImage]);
 
   useEffect(() => {
     assignLabelCoords();
@@ -192,7 +199,7 @@ export default function D3Viewer(): JSX.Element {
               onClick={() => handleChangeImage("/images/bottles.jpg", 0)}
               className="reset"
             >
-              shampoo (this one has lots of polygons)
+              shampoo (this img does not fit well)
             </button>
           </div>
         </div>
@@ -259,7 +266,7 @@ export default function D3Viewer(): JSX.Element {
             isDrawing={isDrawing}
             draftPolygon={draftPolygon}
             polygonsData={polygonsData}
-            setCurrentZoom={setCurrentZoom}
+            setCurrZoom={setCurrZoom}
             setIsDraggingLayer={(bool) => setIsZoomingOrPanning(bool)}
             scaleFactor={scaleFactor}
           />
@@ -271,7 +278,7 @@ export default function D3Viewer(): JSX.Element {
         </div>
         <div className="footerRow">
           <div>
-            <div>Current Zoom: {Math.round(currentZoom * 100)}%</div>
+            <div>Current Zoom: {Math.round(currZoom * 100)}%</div>
             <button className="reset">Fit to container</button>
             <button className="fullsize">Zoom to 100%</button>
           </div>
