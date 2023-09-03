@@ -136,6 +136,7 @@ export default function D3Viewer(): JSX.Element {
       });
       return polygons;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currZoom, t, isZoomingOrPanning, currImage]);
 
   useEffect(() => {
