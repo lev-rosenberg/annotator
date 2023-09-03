@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback, useState } from "react";
 import { fromJson, customJson } from "../components/toFromJson";
-import Link from "next/link";
+import Header from "../components/header";
 import { D3ZoomPan } from "../components/d3demo/d3ZoomPan";
 import { PolylineDrawer } from "../components/d3demo/d3Polyline";
 import { PolygonsDrawer } from "../components/d3demo/d3Polygons";
@@ -167,16 +167,7 @@ export default function D3Viewer(): JSX.Element {
 
   return (
     <div>
-      <Link href="/">
-        <h5>other frameworks</h5>
-      </Link>
-      <Link href="/KonvaViewer">
-        <h5>to Konva Demo</h5>
-      </Link>
-      <Link href="./VisxViewer">
-        <h5>to Visx demo</h5>
-      </Link>
-      <h3>D3 Annotator demo</h3>
+      <Header name="D3.js" frameworks={["visx", "Konva"]} />
       <div>
         <div className="headerRow">
           <button onClick={() => setIsDrawing(!isDrawing)}>

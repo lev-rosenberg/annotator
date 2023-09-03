@@ -3,6 +3,11 @@ body {
   padding: 20px;
 }
 
+.page-header {
+  display: flex;
+  justify-content: space-between;
+}
+
 .headerRow {
   display: flex;
   justify-content: space-between;
@@ -21,4 +26,31 @@ body {
   background-color: rgba(211, 211, 211, 0.301);
   padding: 1%;
   margin-top: 2vh;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 5px 5px;
+  border: 0.5px solid black;
+  border-radius: 15px;
+  background-color: rgba(250, 248, 248, 0.788);
+  cursor: pointer;
+  transition: 0.15s;
+}
+button:hover {
+  color: black;
+  background-color: rgba(148, 148, 148, 0.788);
+}
+
+.headerButton {
+  cursor: pointer;
+  transition: 0.15s;
+  text-decoration: none;
+  color: black;
+}
+
+.headerButton:hover {
+  color: grey;
 }

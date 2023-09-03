@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState } from "react";
-import Link from "next/link";
+import Header from "../components/header";
 
 import { Zoom } from "@visx/zoom";
 import { ProvidedZoom, TransformMatrix } from "@visx/zoom/lib/types";
@@ -284,16 +284,7 @@ export default function VisxViewer(): JSX.Element {
     >
       {(zoom) => (
         <div>
-          <Link href="/">
-            <h5>other frameworks</h5>
-          </Link>
-          <Link href="/D3Viewer">
-            <h5>to D3 Demo</h5>
-          </Link>
-          <Link href="./KonvaViewer">
-            <h5>to Konva demo</h5>
-          </Link>
-          <h3>Visx annotator demo</h3>
+          <Header name="visx" frameworks={["D3", "Konva"]} />
           <div className="headerRow">
             <button
               onClick={() => {

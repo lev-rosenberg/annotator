@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 
 import { customJson } from "../components/toFromJson";
-import Link from "next/link";
+import Header from "../components/header";
 import KonvaAnnotator from "../components/konvaDemo/konvaAnnotator";
 import Konva from "konva";
 import { Point, PolygonData, Dims } from "../types/annotatorTypes";
@@ -256,16 +256,7 @@ export default function KonvaViewer(): JSX.Element {
 
   return (
     <div>
-      <Link href="/">
-        <h5>other frameworks</h5>
-      </Link>
-      <Link href="/D3Viewer">
-        <h5>to D3 Demo</h5>
-      </Link>
-      <Link href="./VisxViewer">
-        <h5>to Visx demo</h5>
-      </Link>
-      <h3>Konva Demo</h3>
+      <Header name="Konva" frameworks={["D3", "visx"]} />
       <div className="headerRow">
         <button
           onClick={() => {
